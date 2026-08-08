@@ -27,9 +27,14 @@ local function stockpileLoop()
     end
 end
 
+local lastFFRefresh = 0
 task.spawn(function()
     while true do
         Teleport.maintainFloat()
+        if tick() - lastFFRefresh >= 5 then
+            pcall(function() S.Remote:FireServer("Teleport", { "Harbour", "" }) end)
+            lastFFRefresh = tick()
+        end
         task.wait(0.05)
     end
 end)
