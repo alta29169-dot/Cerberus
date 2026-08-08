@@ -6,7 +6,7 @@ return {
     SHOTS_PER_BURST = 3,
     SHOT_INTERVAL = 0.025,
     BURST_COOLDOWN = 2.0,
-    KILL_RANGE = 50,
+    KILL_RANGE = 300,
     
     -- Stockpile
     STOCKPILE_DISTANCE = 15,
