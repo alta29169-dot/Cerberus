@@ -8,23 +8,25 @@ local M = _G._HarborModules
 local S = M.services
 local C = M.config
 
--- Initialize modules that need dependencies
+-- Initialize modules
 local Utils = M.utils(S, C)
 local Teleport = M.teleport(S, C, Utils)
 local Stockpile = M.stockpile(S, C, Utils)
 local KillAura = M.killaura(S, C, Utils, Teleport, Stockpile)
 local Loopkill = M.loopkill(S, C, Utils, Teleport, Stockpile, KillAura)
 local RpgBlock = M.rpgblock(S, C, Utils, Stockpile)
-local Gui = M.gui(S, C, KillAura, Loopkill, Stockpile, RpgBlock)
+
+-- GUI
+local GuiCore = M.guicore(S, C, KillAura, Stockpile)
+local GuiToggles = M.guitoggles(GuiCore)
+local GuiTargets = M.guitargets(S, KillAura, GuiCore)
 
 local initialized = false
 local lastFFRefresh = 0
 
 -- Stockpile maintenance loop
 local function stockpileLoop()
-    -- Wait for setup to complete before firing
     task.wait(3)
-    
     while true do
         if initialized then
             Stockpile.cleanup()
@@ -38,14 +40,12 @@ local function stockpileLoop()
     end
 end
 
--- Float position maintenance + FF refresh loop
+-- Float maintenance + FF refresh loop
 task.spawn(function()
     while true do
         if initialized then
             Teleport.maintainFloat()
-            
-            -- Refresh FF if toggle is on
-            if Gui.isFFRefreshEnabled() and tick() - lastFFRefresh >= C.FF_REFRESH_INTERVAL then
+            if GuiCore.isFFRefreshEnabled() and tick() - lastFFRefresh >= C.FF_REFRESH_INTERVAL then
                 pcall(function() S.Remote:FireServer("Teleport", { "Harbour", "" }) end)
                 lastFFRefresh = tick()
             end
@@ -54,9 +54,9 @@ task.spawn(function()
     end
 end)
 
--- RPG Block loop (every frame via Heartbeat, respects toggle)
+-- RPG Block loop
 S.RunService.Heartbeat:Connect(function()
-    if initialized and Gui.isRpgBlockEnabled() then
+    if initialized and GuiCore.isRpgBlockEnabled() then
         RpgBlock.cleanup()
         RpgBlock.run()
     end
@@ -69,11 +69,13 @@ S.LocalPlayer.CharacterAdded:Connect(function()
     Teleport.cleanup()
     Stockpile.clear()
     RpgBlock.clear()
-    Gui.destroy()
+    GuiCore.destroy()
     task.wait(0.5)
     Teleport.toHarbor()
     Teleport.setupAntiGravity()
-    Gui.init()
+    GuiCore.init()
+    GuiToggles.init()
+    GuiTargets.init()
     lastFFRefresh = tick()
     initialized = true
 end)
@@ -81,7 +83,9 @@ end)
 -- Init
 Teleport.toHarbor()
 Teleport.setupAntiGravity()
-Gui.init()
+GuiCore.init()
+GuiToggles.init()
+GuiTargets.init()
 lastFFRefresh = tick()
 initialized = true
 
