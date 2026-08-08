@@ -4,13 +4,10 @@ return function(S, C, U)
 
     -- Get stockpile position 15 studs ahead
     local function getPosition()
-        local char = S.LocalPlayer.Character
-        if not char then return nil end
-        local root = char:FindFirstChild("HumanoidRootPart")
-        if not root then return nil end
-        return root.Position + (root.CFrame.LookVector * C.STOCKPILE_DISTANCE)
+        local myHarbor = U.getMyHarbor()
+        if not myHarbor then return nil end
+        return myHarbor.Position + Vector3.new(0, 3000, 20)
     end
-
     -- Freeze a missile with physics constraints
     local function freeze(missile, position)
         for _, child in ipairs(missile:GetChildren()) do
