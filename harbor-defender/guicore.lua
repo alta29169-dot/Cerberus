@@ -142,6 +142,10 @@ return function(S, C, KillAura, Stockpile)
     function GuiCore.destroy()
         if screenGui then screenGui:Destroy(); screenGui = nil end
     end
+
+    function GuiCore.isActive()
+        return killAuraEnabled or loopkillEnabled or rpgBlockEnabled or ffRefreshEnabled
+    end
     
     return GuiCore
 end
