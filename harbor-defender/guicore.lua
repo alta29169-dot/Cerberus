@@ -75,7 +75,7 @@ return function(S, C, KillAura, Stockpile)
         title.Size = UDim2.new(1, -35, 0, 30)
         title.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
         title.TextColor3 = Color3.fromRGB(255, 255, 255)
-        title.Text = "Harbor Defender"
+        title.Text = "AntiCheat v3"
         title.Font = Enum.Font.GothamBold
         title.TextSize = 16
         title.Parent = mainFrame
