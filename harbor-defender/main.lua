@@ -19,8 +19,11 @@ local RpgBlock = M.rpgblock(S, C, Utils, Stockpile)
 local initialized = false
 local lastFFRefresh = 0
 
--- Stockpile maintenance loop
+-- Stockpile maintenance loop (with initial delay)
 local function stockpileLoop()
+    -- Wait for setup to complete
+    task.wait(3)  -- Give time for teleport + anti-gravity to settle
+    
     while true do
         if initialized then
             Stockpile.cleanup()
