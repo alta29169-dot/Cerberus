@@ -1,4 +1,4 @@
-return function(S, C, U, Teleport, Stockpile)
+return function(S, C, U, Teleport, Stockpile, GuiCore)
     local KillAura = {}
     local killCounts = {}
     local loopkillTargets = {}
@@ -34,21 +34,26 @@ return function(S, C, U, Teleport, Stockpile)
     -- Main kill aura loop
     function KillAura.run(initializedFn)
         while true do
-            if initializedFn() then
+            if initializedFn() and GuiCore.isKillAuraEnabled() then
                 local enemies = U.getEnemiesInRange(initializedFn())
                 if #enemies > 0 then
                     for _, enemy in ipairs(enemies) do
-                        -- FIXED:
-                        if U.hasForceField(enemy) then
-                            U.equipTool("M1 Garand")
-                            task.wait(0.1)
-                            Teleport.toEnemy(enemy)
-                            task.wait(0.2)
-                            KillAura.fireBurst(enemy)
-                        else
-                            Stockpile.teleportEnemy(enemy)
-                            loopkillTargets[enemy.Name] = true  -- ADD THIS LINE
-                            print("🔥 Loopkill activated for:", enemy.Name)
+                        if U.isEnemyAlive(enemy) then
+                            if U.hasForceField(enemy) then
+                                U.equipTool("M1 Garand")
+                                task.wait(0.1)
+                                if GuiCore.isKillAuraTpEnabled() then
+                                    Teleport.toEnemy(enemy)
+                                    task.wait(0.2)
+                                end
+                                KillAura.fireBurst(enemy)
+                            else
+                                Stockpile.teleportEnemy(enemy)
+                                -- Mark for loopkill if loopkill is enabled
+                                if GuiCore.isLoopkillEnabled() then
+                                    KillAura.getLoopkillTargets()[enemy.Name] = true
+                                end
+                            end
                         end
                     end
                     task.wait(C.BURST_COOLDOWN)
@@ -58,8 +63,7 @@ return function(S, C, U, Teleport, Stockpile)
             else
                 task.wait(0.5)
             end
-        end
+         end
     end
-
     return KillAura
 end
