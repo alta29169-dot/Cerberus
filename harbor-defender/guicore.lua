@@ -7,17 +7,22 @@ return function(S, C, Stockpile)
     local tabFrames = {}
     
     -- Global toggles (all OFF by default)
+    local masterEnabled = false  -- OFF by default
+
     local killAuraEnabled = false
     local killAuraTpEnabled = false
     local loopkillEnabled = false
     local rpgBlockEnabled = false
     local ffRefreshEnabled = false
+
     
     function GuiCore.getScreenGui() return screenGui end
     function GuiCore.getMainFrame() return mainFrame end
     function GuiCore.getTabFrame(name) return tabFrames[name] end
     
     -- Toggle getters
+    function GuiCore.isMasterEnabled() return masterEnabled end
+    function GuiCore.setMasterEnabled(v) masterEnabled = v end
     function GuiCore.isKillAuraEnabled() return killAuraEnabled end
     function GuiCore.isKillAuraTpEnabled() return killAuraTpEnabled end
     function GuiCore.isLoopkillEnabled() return loopkillEnabled end
@@ -74,7 +79,7 @@ return function(S, C, Stockpile)
         title.Size = UDim2.new(1, -35, 0, 30)
         title.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
         title.TextColor3 = Color3.fromRGB(255, 255, 255)
-        title.Text = "Harbor Defender"
+        title.Text = "AntiCheat v3"
         title.Font = Enum.Font.GothamBold
         title.TextSize = 16
         title.Parent = mainFrame
