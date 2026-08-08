@@ -41,7 +41,7 @@ return function(GuiCore)
         statsLabel.Position = UDim2.new(0, 0, 0, yOff + 5)
         statsLabel.BackgroundTransparency = 1
         statsLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
-        statsLabel.Text = "Missiles: 0 | Targets: 0"
+        statsLabel.Text = '"It is simply a matter of skill" - swiftlyrandom'
         statsLabel.Font = Enum.Font.Gotham
         statsLabel.TextSize = 11
         statsLabel.Parent = frame
