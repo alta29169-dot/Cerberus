@@ -88,6 +88,11 @@ return function(S, C, U)
         return n
     end
 
+    -- Check if a missile is in our stockpile
+    function Stockpile.isStockpiled(missile)
+        return missiles[missile] ~= nil
+    end
+
     -- Full clear (on respawn)
     function Stockpile.clear()
         for missile, data in pairs(missiles) do
