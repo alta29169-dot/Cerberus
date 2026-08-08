@@ -3,14 +3,14 @@ return {
     FLOAT_HEIGHT = 200,
     
     -- Kill Aura
-    SHOTS_PER_BURST = 3,
+    SHOTS_PER_BURST = 4,
     SHOT_INTERVAL = 0.025,
     BURST_COOLDOWN = 2.0,
     KILL_RANGE = 300,
     
     -- Stockpile
     STOCKPILE_DISTANCE = 15,
-    STOCKPILE_MAX = 2,
+    STOCKPILE_MAX = 4,
     STOCKPILE_CHECK_INTERVAL = 0.5,
     
     -- Loopkill
