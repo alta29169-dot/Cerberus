@@ -93,11 +93,13 @@ return function(S, C, KillAura, Stockpile)
         
         -- Minimize/maximize toggle
         minimizedIcon.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or 
+               input.UserInputType == Enum.UserInputType.Touch then
                 minimizedIcon.Visible = false
                 mainFrame.Visible = true
             end
         end)
+
         minBtn.MouseButton1Click:Connect(function()
             mainFrame.Visible = false
             minimizedIcon.Visible = true
