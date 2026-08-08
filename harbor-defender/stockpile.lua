@@ -64,20 +64,34 @@ return function(S, C, U)
         end
     end
 
-    -- Teleport an enemy into the stockpile
+    -- Teleport an enemy directly onto a stockpiled missile
     function Stockpile.teleportEnemy(enemy)
         if not enemy then return false end
         local char = enemy.Character
         if not char then return false end
         local root = char:FindFirstChild("HumanoidRootPart")
         if not root then return false end
-        local pos = getPosition()
-        if not pos then return false end
-        root.CFrame = CFrame.new(pos)
+    
+        -- Find the first available stockpiled missile
+        local missilePos = nil
+        for missile, _ in pairs(missiles) do
+            if missile and missile.Parent then
+                missilePos = missile.Position
+                break
+            end
+        end
+        
+        -- Fallback to stockpile spawn position if no missiles
+        if not missilePos then
+            missilePos = getPosition()
+            if not missilePos then return false end
+        end
+        
+        root.CFrame = CFrame.new(missilePos)
         root.Velocity = Vector3.zero
         root.RotVelocity = Vector3.zero
         local hum = char:FindFirstChild("Humanoid")
-        if hum then hum:MoveTo(pos) end
+        if hum then hum:MoveTo(missilePos) end
         return true
     end
 
