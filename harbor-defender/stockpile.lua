@@ -31,6 +31,7 @@ return function(S, C, U)
         align.Parent = missile
         missile.Velocity = Vector3.zero
         missile.RotVelocity = Vector3.zero
+        missile.Transparency = 1
         missiles[missile] = { attachment = att, align = align }
     end
 
