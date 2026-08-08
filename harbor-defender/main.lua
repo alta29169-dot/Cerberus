@@ -1,6 +1,6 @@
 --[[
     HARBOR DEFENDER – Main Entry Point
-    Reads modules from _G._HarborModules (set by bootloader)
+    All toggles wired, starts dormant, GUI controls everything
 ]]
 
 local M = _G._HarborModules
@@ -8,16 +8,14 @@ local M = _G._HarborModules
 local S = M.services
 local C = M.config
 
--- Initialize modules
+-- Initialize in dependency order
 local Utils = M.utils(S, C)
 local Teleport = M.teleport(S, C, Utils)
 local Stockpile = M.stockpile(S, C, Utils)
-local KillAura = M.killaura(S, C, Utils, Teleport, Stockpile)
-local Loopkill = M.loopkill(S, C, Utils, Teleport, Stockpile, KillAura)
+local GuiCore = M.guicore(S, C, Stockpile)
+local KillAura = M.killaura(S, C, Utils, Teleport, Stockpile, GuiCore)
+local Loopkill = M.loopkill(S, C, Utils, Teleport, Stockpile, KillAura, GuiCore)
 local RpgBlock = M.rpgblock(S, C, Utils, Stockpile)
-
--- GUI
-local GuiCore = M.guicore(S, C, KillAura, Stockpile)
 local GuiToggles = M.guitoggles(GuiCore)
 local GuiTargets = M.guitargets(S, KillAura, GuiCore)
 
@@ -40,7 +38,7 @@ local function stockpileLoop()
     end
 end
 
--- Float maintenance + FF refresh loop
+-- Float maintenance + FF refresh
 task.spawn(function()
     while true do
         if initialized then
@@ -93,11 +91,4 @@ task.spawn(function() KillAura.run(function() return initialized end) end)
 task.spawn(stockpileLoop)
 task.spawn(function() Loopkill.run(function() return initialized end) end)
 
-print("✅ Harbor Defender loaded")
-print("   Float height:", C.FLOAT_HEIGHT, "studs above harbor")
-print("   Kill range:", C.KILL_RANGE, "studs")
-print("   FF users: Kill Aura (M1 Garand)")
-print("   Non-FF users: Stockpile blast")
-print("   Loopkill: teleported into stockpile until they leave")
-print("   RPG Block: all enemy missiles absorbed")
-print("   FF Refresh: every", C.FF_REFRESH_INTERVAL, "seconds")
+print("✅ Harbor Defender loaded (dormant — use GUI to activate)")
