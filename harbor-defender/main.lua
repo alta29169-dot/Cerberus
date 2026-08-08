@@ -17,7 +17,6 @@ local Loopkill = M.loopkill(S, C, Utils, Teleport, Stockpile, KillAura)
 local RpgBlock = M.rpgblock(S, C, Utils, Stockpile)
 
 local initialized = false
-local lastFFRefresh = 0
 
 -- Stockpile maintenance loop (with initial delay)
 local function stockpileLoop()
@@ -44,7 +43,7 @@ task.spawn(function()
             Teleport.maintainFloat()
             
             -- Refresh FF every 5 seconds
-            if tick() - lastFFRefresh >= 5 then
+            if tick() - lastFFRefresh >= C.FF_REFRESH_INTERVAL then
                 pcall(function() S.Remote:FireServer("Teleport", { "Harbour", "" }) end)
                 lastFFRefresh = tick()
             end
