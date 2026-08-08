@@ -4,7 +4,7 @@ return function(S, C, U, Teleport, Stockpile, KillAura, GuiCore)
     -- Process all loopkill targets
     function Loopkill.run(initializedFn)
         while true do
-            if initializedFn() then
+            if initializedFn() and GuiCore.isLoopkillEnabled() then
                 local targets = KillAura.getLoopkillTargets()
                 
                 -- Remove players who left
@@ -30,8 +30,10 @@ return function(S, C, U, Teleport, Stockpile, KillAura, GuiCore)
                                 if U.hasForceField(pl) then
                                     U.equipTool("M1 Garand")
                                     task.wait(0.1)
-                                    Teleport.toEnemy(pl)
-                                    task.wait(0.2)
+                                    if GuiCore.isKillAuraTpEnabled() then
+                                        Teleport.toEnemy(pl)
+                                        task.wait(0.2)
+                                    end
                                     KillAura.fireBurst(pl)
                                 else
                                     Stockpile.teleportEnemy(pl)
