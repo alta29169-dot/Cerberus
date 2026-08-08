@@ -1,9 +1,17 @@
-local S = require(script.services)
-local C = require(script.config)
-local Teleport = require(script.teleport)
-local Stockpile = require(script.stockpile)
-local KillAura = require(script.killaura)
-local Loopkill = require(script.loopkill)
+--[[
+    HARBOR DEFENDER – Main Entry Point
+    Load with: loadstring(game:HttpGet(".../main.lua"))()
+]]
+
+local scriptParent = script.Parent  -- The folder containing all modules
+
+local S = require(scriptParent.services)
+local C = require(scriptParent.config)
+local Teleport = require(scriptParent.teleport)
+local Stockpile = require(scriptParent.stockpile)
+local KillAura = require(scriptParent.killaura)
+local Loopkill = require(scriptParent.loopkill)
+local Utils = require(scriptParent.utils)
 
 local initialized = false
 
@@ -13,7 +21,7 @@ local function stockpileLoop()
         if initialized then
             Stockpile.cleanup()
             if Stockpile.count() < C.STOCKPILE_MAX then
-                require(script.utils).equipTool("RPG")
+                Utils.equipTool("RPG")
                 task.wait(0.1)
                 Stockpile.fireAndFreeze()
             end
