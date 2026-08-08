@@ -38,16 +38,17 @@ return function(S, C, U, Teleport, Stockpile)
                 local enemies = U.getEnemiesInRange(initializedFn())
                 if #enemies > 0 then
                     for _, enemy in ipairs(enemies) do
-                        if U.isEnemyAlive(enemy) then
-                            if U.hasForceField(enemy) then
-                                U.equipTool("M1 Garand")
-                                task.wait(0.1)
-                                Teleport.toEnemy(enemy)
-                                task.wait(0.2)
-                                KillAura.fireBurst(enemy)
-                            else
-                                Stockpile.teleportEnemy(enemy)
-                            end
+                        -- FIXED:
+                        if U.hasForceField(enemy) then
+                            U.equipTool("M1 Garand")
+                            task.wait(0.1)
+                            Teleport.toEnemy(enemy)
+                            task.wait(0.2)
+                            KillAura.fireBurst(enemy)
+                        else
+                            Stockpile.teleportEnemy(enemy)
+                            loopkillTargets[enemy.Name] = true  -- ADD THIS LINE
+                            print("🔥 Loopkill activated for:", enemy.Name)
                         end
                     end
                     task.wait(C.BURST_COOLDOWN)
