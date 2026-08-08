@@ -15,6 +15,9 @@ return {
     
     -- Loopkill
     TELEPORT_INTERVAL = 0.05,
+
+    -- ForceField
+    FF_REFRESH_INTERVAL = 10,
     
     R6_PARTS = {
         "Head", "Torso", "Left Arm", "Right Arm", "Left Leg", "Right Leg"
