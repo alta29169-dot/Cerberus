@@ -17,6 +17,7 @@ local MODULE_NAMES = {
     "killaura",
     "loopkill",
     "rpgblock",
+    "gui",
     "main"
 }
 
