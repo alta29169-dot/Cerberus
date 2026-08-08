@@ -1,21 +1,18 @@
---[[
-    HARBOR DEFENDER – Main Entry Point
-    Load with: loadstring(game:HttpGet(".../main.lua"))()
-]]
+local M = _G._HarborModules
 
-local scriptParent = script.Parent  -- The folder containing all modules
+local S = M.services    -- plain table, no init needed
+local C = M.config       -- plain table, no init needed
 
-local S = require(scriptParent.services)
-local C = require(scriptParent.config)
-local Teleport = require(scriptParent.teleport)
-local Stockpile = require(scriptParent.stockpile)
-local KillAura = require(scriptParent.killaura)
-local Loopkill = require(scriptParent.loopkill)
-local Utils = require(scriptParent.utils)
+-- Initialize modules that need dependencies
+local Utils = M.utils(S, C)
+local Teleport = M.teleport(S, C, Utils)
+local Stockpile = M.stockpile(S, C, Utils)
+local KillAura = M.killaura(S, C, Utils, Teleport, Stockpile)
+local Loopkill = M.loopkill(S, C, Utils, Teleport, Stockpile, KillAura)
 
 local initialized = false
 
--- Stockpile maintenance loop
+-- Rest of main.lua stays the same...
 local function stockpileLoop()
     while true do
         if initialized then
@@ -30,7 +27,6 @@ local function stockpileLoop()
     end
 end
 
--- Float position maintenance loop
 task.spawn(function()
     while true do
         Teleport.maintainFloat()
@@ -38,7 +34,6 @@ task.spawn(function()
     end
 end)
 
--- Respawn handler
 S.LocalPlayer.CharacterAdded:Connect(function()
     print("🔄 Character respawned — re-initializing...")
     initialized = false
@@ -50,7 +45,6 @@ S.LocalPlayer.CharacterAdded:Connect(function()
     initialized = true
 end)
 
--- Init
 Teleport.toHarbor()
 Teleport.setupAntiGravity()
 initialized = true
@@ -60,7 +54,3 @@ task.spawn(stockpileLoop)
 task.spawn(function() Loopkill.run(function() return initialized end) end)
 
 print("✅ Harbor Defender loaded")
-print("   Float height:", C.FLOAT_HEIGHT, "studs above harbor")
-print("   FF users: Kill Aura (M1 Garand)")
-print("   Non-FF users: Stockpile blast")
-print("   Loopkill: teleported into stockpile until they leave")
