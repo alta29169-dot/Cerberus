@@ -1,6 +1,5 @@
 --[[
-    HARBOR DEFENDER – Main Entry Point
-    All toggles wired, starts dormant, GUI controls everything
+    AntiCheat v3, developed by swiftlyrandom
 ]]
 
 local M = _G._HarborModules
@@ -26,7 +25,7 @@ local lastFFRefresh = 0
 local function stockpileLoop()
     task.wait(3)
     while true do
-        if initialized then
+        if initialized and GuiCore.isMasterEnabled() then
             Stockpile.cleanup()
             if Stockpile.count() < C.STOCKPILE_MAX then
                 Utils.equipTool("RPG")
@@ -41,7 +40,7 @@ end
 -- Float maintenance + FF refresh
 task.spawn(function()
     while true do
-        if initialized then
+        if initialized and GuiCore.isMasterEnabled() then
             Teleport.maintainFloat()
             if GuiCore.isFFRefreshEnabled() and tick() - lastFFRefresh >= C.FF_REFRESH_INTERVAL then
                 pcall(function() S.Remote:FireServer("Teleport", { "Harbour", "" }) end)
@@ -54,9 +53,28 @@ end)
 
 -- RPG Block loop
 S.RunService.Heartbeat:Connect(function()
-    if initialized and GuiCore.isRpgBlockEnabled() then
+    if initialized and GuiCore.isMasterEnabled() and GuiCore.isRpgBlockEnabled() then
         RpgBlock.cleanup()
         RpgBlock.run()
+    end
+end)
+
+-- Master toggle watcher (activates/deactivates float)
+task.spawn(function()
+    local wasEnabled = false
+    while true do
+        local isEnabled = GuiCore.isMasterEnabled()
+        if isEnabled and not wasEnabled then
+            if initialized then
+                Teleport.setupAntiGravity()
+            end
+            print("🟢 Harbor Defender activated")
+        elseif not isEnabled and wasEnabled then
+            Teleport.cleanup()
+            print("🔴 Harbor Defender deactivated")
+        end
+        wasEnabled = isEnabled
+        task.wait(0.5)
     end
 end)
 
@@ -70,7 +88,6 @@ S.LocalPlayer.CharacterAdded:Connect(function()
     GuiCore.destroy()
     task.wait(0.5)
     Teleport.toHarbor()
-    Teleport.setupAntiGravity()
     GuiCore.init()
     GuiToggles.init()
     GuiTargets.init()
@@ -80,7 +97,6 @@ end)
 
 -- Init
 Teleport.toHarbor()
-Teleport.setupAntiGravity()
 GuiCore.init()
 GuiToggles.init()
 GuiTargets.init()
@@ -91,4 +107,4 @@ task.spawn(function() KillAura.run(function() return initialized end) end)
 task.spawn(stockpileLoop)
 task.spawn(function() Loopkill.run(function() return initialized end) end)
 
-print("✅ Harbor Defender loaded (dormant — use GUI to activate)")
+print("✅ Harbor Defender loaded (dormant — use MASTER toggle in GUI)")
