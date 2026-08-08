@@ -9,16 +9,9 @@ local GITHUB_BRANCH = "main"
 local MODULES_PATH = "harbor-defender"
 
 local MODULE_NAMES = {
-    "config",
-    "services",
-    "utils",
-    "teleport",
-    "stockpile",
-    "killaura",
-    "loopkill",
-    "rpgblock",
-    "gui",
-    "main"
+    "config", "services", "utils",
+    "teleport", "stockpile", "killaura", "loopkill", "rpgblock",
+    "guicore", "guitoggles", "guitargets", "main"
 }
 
 local RAW_BASE = string.format(
