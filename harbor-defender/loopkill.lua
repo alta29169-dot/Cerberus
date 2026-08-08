@@ -1,4 +1,4 @@
-return function(S, C, U, Teleport, Stockpile, KillAura)
+return function(S, C, U, Teleport, Stockpile, KillAura, GuiCore)
     local Loopkill = {}
 
     -- Process all loopkill targets
