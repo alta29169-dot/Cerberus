@@ -9,17 +9,12 @@ return function(S, C, KillAura, Loopkill, Stockpile, RpgBlock)
     
     -- Toggles
     local killAuraEnabled = true
-    local killAuraTpEnabled = true     -- NEW: separate toggle for kill aura teleport
+    local killAuraTpEnabled = true
     local loopkillEnabled = true
-    local targetedLoopkillEnabled = false  -- NEW: only loopkill selected targets
     local rpgBlockEnabled = true
     local ffRefreshEnabled = true
     
-    -- Target tracking
-    local targetList = {}  -- { name = "PlayerName", loopkill = true/false }
-    local targetListFrame = nil
-    
-    -- Create the GUI
+    -- ==================== CREATE GUI ====================
     local function createGUI()
         if screenGui then screenGui:Destroy() end
         
@@ -27,7 +22,7 @@ return function(S, C, KillAura, Loopkill, Stockpile, RpgBlock)
         screenGui.Name = "HarborDefender"
         screenGui.Parent = S.LocalPlayer:WaitForChild("PlayerGui")
         
-        -- ==================== MINIMIZED ICON ====================
+        -- MINIMIZED ICON
         minimizedIcon = Instance.new("Frame")
         minimizedIcon.Name = "MinimizedIcon"
         minimizedIcon.Size = UDim2.new(0, 40, 0, 40)
@@ -57,9 +52,8 @@ return function(S, C, KillAura, Loopkill, Stockpile, RpgBlock)
             end
         end)
         
-        -- ==================== MAIN FRAME ====================
+        -- MAIN FRAME
         mainFrame = Instance.new("Frame")
-        mainFrame.Name = "MainFrame"
         mainFrame.Size = UDim2.new(0, 240, 0, 280)
         mainFrame.Position = UDim2.new(1, -250, 0, 10)
         mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
@@ -80,7 +74,7 @@ return function(S, C, KillAura, Loopkill, Stockpile, RpgBlock)
         title.TextSize = 16
         title.Parent = mainFrame
         
-        -- Minimize button (replaces close)
+        -- Minimize button
         local minBtn = Instance.new("TextButton")
         minBtn.Size = UDim2.new(0, 30, 0, 30)
         minBtn.Position = UDim2.new(1, -30, 0, 0)
@@ -109,7 +103,6 @@ return function(S, C, KillAura, Loopkill, Stockpile, RpgBlock)
             end
         end
         
-        -- Tab buttons
         local tabY = 35
         local tabs = {"Toggles", "Targets"}
         for i, tabName in ipairs(tabs) do
@@ -162,10 +155,10 @@ return function(S, C, KillAura, Loopkill, Stockpile, RpgBlock)
             return btn
         end
         
+        -- Toggles tab (no Targeted Loopkill here)
         createToggle("Kill Aura", killAuraEnabled, toggleFrame, function(v) killAuraEnabled = v end)
         createToggle("Kill Aura TP", killAuraTpEnabled, toggleFrame, function(v) killAuraTpEnabled = v end)
         createToggle("Loopkill", loopkillEnabled, toggleFrame, function(v) loopkillEnabled = v end)
-        createToggle("Targeted Loopkill", targetedLoopkillEnabled, toggleFrame, function(v) targetedLoopkillEnabled = v end)
         createToggle("RPG Block", rpgBlockEnabled, toggleFrame, function(v) rpgBlockEnabled = v end)
         createToggle("FF Refresh", ffRefreshEnabled, toggleFrame, function(v) ffRefreshEnabled = v end)
         
@@ -183,10 +176,45 @@ return function(S, C, KillAura, Loopkill, Stockpile, RpgBlock)
         -- ==================== TARGETS TAB ====================
         local targetsFrame = tabFrames["Targets"]
         
-        -- Scrolling frame for target list
-        targetListFrame = Instance.new("ScrollingFrame")
-        targetListFrame.Size = UDim2.new(1, 0, 1, -5)
-        targetListFrame.Position = UDim2.new(0, 0, 0, 0)
+        -- Username input section
+        local inputFrame = Instance.new("Frame")
+        inputFrame.Size = UDim2.new(1, 0, 0, 35)
+        inputFrame.Position = UDim2.new(0, 0, 0, 0)
+        inputFrame.BackgroundTransparency = 1
+        inputFrame.Parent = targetsFrame
+        
+        local inputBox = Instance.new("TextBox")
+        inputBox.Size = UDim2.new(0.6, -5, 0, 30)
+        inputBox.Position = UDim2.new(0, 0, 0, 0)
+        inputBox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+        inputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+        inputBox.PlaceholderText = "Username..."
+        inputBox.Font = Enum.Font.Gotham
+        inputBox.TextSize = 12
+        inputBox.Parent = inputFrame
+        
+        local addBtn = Instance.new("TextButton")
+        addBtn.Size = UDim2.new(0.35, 0, 0, 30)
+        addBtn.Position = UDim2.new(0.63, 0, 0, 0)
+        addBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
+        addBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        addBtn.Text = "Add"
+        addBtn.Font = Enum.Font.GothamBold
+        addBtn.TextSize = 13
+        addBtn.Parent = inputFrame
+        addBtn.MouseButton1Click:Connect(function()
+            local name = inputBox.Text
+            if name and name ~= "" then
+                KillAura.getLoopkillTargets()[name] = true
+                inputBox.Text = ""
+                print("➕ Added loopkill target:", name)
+            end
+        end)
+        
+        -- Scrolling target list
+        local targetListFrame = Instance.new("ScrollingFrame")
+        targetListFrame.Size = UDim2.new(1, 0, 1, -40)
+        targetListFrame.Position = UDim2.new(0, 0, 0, 40)
         targetListFrame.BackgroundTransparency = 1
         targetListFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
         targetListFrame.ScrollBarThickness = 6
@@ -198,33 +226,72 @@ return function(S, C, KillAura, Loopkill, Stockpile, RpgBlock)
         
         -- Refresh target list
         local function refreshTargetList()
-            -- Clear old entries
             for _, child in ipairs(targetListFrame:GetChildren()) do
-                if child:IsA("TextButton") or child:IsA("Frame") then
-                    child:Destroy()
-                end
+                if child:IsA("Frame") then child:Destroy() end
             end
             
             local loopkillTargets = KillAura.getLoopkillTargets()
             local ySize = 0
             
+            -- Show manually added targets first (even if not in game)
+            for name, _ in pairs(loopkillTargets) do
+                local found = false
+                for _, pl in ipairs(S.Players:GetPlayers()) do
+                    if pl.Name == name then found = true; break end
+                end
+                
+                if not found then
+                    local entryFrame = Instance.new("Frame")
+                    entryFrame.Size = UDim2.new(1, 0, 0, 30)
+                    entryFrame.BackgroundColor3 = Color3.fromRGB(50, 30, 30)
+                    entryFrame.BorderSizePixel = 0
+                    entryFrame.Parent = targetListFrame
+                    
+                    local nameLabel = Instance.new("TextLabel")
+                    nameLabel.Size = UDim2.new(0.55, 0, 1, 0)
+                    nameLabel.Position = UDim2.new(0, 5, 0, 0)
+                    nameLabel.BackgroundTransparency = 1
+                    nameLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+                    nameLabel.Text = name .. " (offline)"
+                    nameLabel.Font = Enum.Font.Gotham
+                    nameLabel.TextSize = 11
+                    nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+                    nameLabel.Parent = entryFrame
+                    
+                    local removeBtn = Instance.new("TextButton")
+                    removeBtn.Size = UDim2.new(0.35, 0, 1, -4)
+                    removeBtn.Position = UDim2.new(0.63, 0, 0, 2)
+                    removeBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
+                    removeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+                    removeBtn.Text = "Remove"
+                    removeBtn.Font = Enum.Font.Gotham
+                    removeBtn.TextSize = 11
+                    removeBtn.Parent = entryFrame
+                    
+                    removeBtn.MouseButton1Click:Connect(function()
+                        loopkillTargets[name] = nil
+                        print("➖ Removed loopkill target:", name)
+                    end)
+                    
+                    ySize = ySize + 33
+                end
+            end
+            
+            -- Show active players
             for _, pl in ipairs(S.Players:GetPlayers()) do
                 if pl ~= S.LocalPlayer and pl.Team ~= S.LocalPlayer.Team and pl.Character then
                     local isLoopkilled = loopkillTargets[pl.Name] == true
                     local hasFF = false
-                    if pl.Character then
-                        for _, child in ipairs(pl.Character:GetDescendants()) do
-                            if child:IsA("ForceField") then hasFF = true; break end
-                        end
+                    for _, child in ipairs(pl.Character:GetDescendants()) do
+                        if child:IsA("ForceField") then hasFF = true; break end
                     end
                     
                     local entryFrame = Instance.new("Frame")
-                    entryFrame.Size = UDim2.new(1, 0, 0, 35)
+                    entryFrame.Size = UDim2.new(1, 0, 0, 30)
                     entryFrame.BackgroundColor3 = isLoopkilled and Color3.fromRGB(50, 30, 30) or Color3.fromRGB(30, 30, 30)
                     entryFrame.BorderSizePixel = 0
                     entryFrame.Parent = targetListFrame
                     
-                    -- Name label
                     local nameLabel = Instance.new("TextLabel")
                     nameLabel.Size = UDim2.new(0.55, 0, 1, 0)
                     nameLabel.Position = UDim2.new(0, 5, 0, 0)
@@ -236,48 +303,52 @@ return function(S, C, KillAura, Loopkill, Stockpile, RpgBlock)
                     nameLabel.TextXAlignment = Enum.TextXAlignment.Left
                     nameLabel.Parent = entryFrame
                     
-                    -- Loopkill toggle button for this target
-                    local lkBtn = Instance.new("TextButton")
-                    lkBtn.Size = UDim2.new(0.4, 0, 1, -4)
-                    lkBtn.Position = UDim2.new(0.58, 0, 0, 2)
-                    lkBtn.BackgroundColor3 = isLoopkilled and Color3.fromRGB(150, 50, 50) or Color3.fromRGB(50, 50, 50)
-                    lkBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-                    lkBtn.Text = isLoopkilled and "Loopkill: ON" or "Loopkill: OFF"
-                    lkBtn.Font = Enum.Font.Gotham
-                    lkBtn.TextSize = 11
-                    lkBtn.Parent = entryFrame
+                    local actionBtn = Instance.new("TextButton")
+                    actionBtn.Size = UDim2.new(0.35, 0, 1, -4)
+                    actionBtn.Position = UDim2.new(0.63, 0, 0, 2)
                     
-                    local targetName = pl.Name
-                    lkBtn.MouseButton1Click:Connect(function()
-                        local targets = KillAura.getLoopkillTargets()
-                        if targets[targetName] then
-                            targets[targetName] = nil
-                            lkBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-                            lkBtn.Text = "Loopkill: OFF"
-                        else
-                            targets[targetName] = true
-                            lkBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
-                            lkBtn.Text = "Loopkill: ON"
-                        end
-                    end)
+                    if isLoopkilled then
+                        actionBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
+                        actionBtn.Text = "Remove"
+                        actionBtn.Font = Enum.Font.Gotham
+                        actionBtn.TextSize = 11
+                        actionBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+                        actionBtn.Parent = entryFrame
+                        
+                        local targetName = pl.Name
+                        actionBtn.MouseButton1Click:Connect(function()
+                            loopkillTargets[targetName] = nil
+                            print("➖ Removed loopkill target:", targetName)
+                        end)
+                    else
+                        actionBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
+                        actionBtn.Text = "Add"
+                        actionBtn.Font = Enum.Font.Gotham
+                        actionBtn.TextSize = 11
+                        actionBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+                        actionBtn.Parent = entryFrame
+                        
+                        local targetName = pl.Name
+                        actionBtn.MouseButton1Click:Connect(function()
+                            loopkillTargets[targetName] = true
+                            print("➕ Added loopkill target:", targetName)
+                        end)
+                    end
                     
-                    ySize = ySize + 38
+                    ySize = ySize + 33
                 end
             end
             
             targetListFrame.CanvasSize = UDim2.new(0, 0, 0, math.max(ySize, 200))
         end
         
-        -- Update stats and target list periodically
+        -- Periodic updates
         task.spawn(function()
             while screenGui and screenGui.Parent do
                 local stockCount = Stockpile and Stockpile.count() or 0
                 local targetCount = KillAura and KillAura.getLoopkillTargets() and table.count(KillAura.getLoopkillTargets()) or 0
                 statsLabel.Text = string.format("Missiles: %d | Loopkilled: %d", stockCount, targetCount)
-                
-                -- Refresh target list every 2 seconds
                 pcall(refreshTargetList)
-                
                 task.wait(2)
             end
         end)
@@ -287,20 +358,12 @@ return function(S, C, KillAura, Loopkill, Stockpile, RpgBlock)
     function Gui.isKillAuraEnabled() return killAuraEnabled end
     function Gui.isKillAuraTpEnabled() return killAuraTpEnabled end
     function Gui.isLoopkillEnabled() return loopkillEnabled end
-    function Gui.isTargetedLoopkillEnabled() return targetedLoopkillEnabled end
     function Gui.isRpgBlockEnabled() return rpgBlockEnabled end
     function Gui.isFFRefreshEnabled() return ffRefreshEnabled end
     
-    function Gui.init()
-        createGUI()
-        print("🖥️ GUI loaded")
-    end
-    
+    function Gui.init() createGUI(); print("🖥️ GUI loaded") end
     function Gui.destroy()
-        if screenGui then
-            screenGui:Destroy()
-            screenGui = nil
-        end
+        if screenGui then screenGui:Destroy(); screenGui = nil end
     end
     
     return Gui
