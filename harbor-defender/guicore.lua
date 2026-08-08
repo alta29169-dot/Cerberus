@@ -1,4 +1,4 @@
-return function(S, C, KillAura, Stockpile)
+return function(S, C, Stockpile)
     local GuiCore = {}
     
     local screenGui = nil
@@ -6,7 +6,7 @@ return function(S, C, KillAura, Stockpile)
     local minimizedIcon = nil
     local tabFrames = {}
     
-    -- Global toggles
+    -- Global toggles (all OFF by default)
     local killAuraEnabled = false
     local killAuraTpEnabled = false
     local loopkillEnabled = false
@@ -38,26 +38,25 @@ return function(S, C, KillAura, Stockpile)
         screenGui.Name = "HarborDefender"
         screenGui.Parent = S.LocalPlayer:WaitForChild("PlayerGui")
         
-        -- Minimized icon
-        minimizedIcon = Instance.new("Frame")
+        -- Minimized icon (TextButton for reliable clicks)
+        minimizedIcon = Instance.new("TextButton")
         minimizedIcon.Size = UDim2.new(0, 40, 0, 40)
         minimizedIcon.Position = UDim2.new(1, -50, 0, 10)
         minimizedIcon.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
         minimizedIcon.BackgroundTransparency = 0.1
         minimizedIcon.BorderSizePixel = 0
-        minimizedIcon.Active = true
+        minimizedIcon.Text = "🥰"
+        minimizedIcon.Font = Enum.Font.GothamBold
+        minimizedIcon.TextSize = 20
+        minimizedIcon.TextColor3 = Color3.fromRGB(255, 255, 255)
         minimizedIcon.Draggable = true
         minimizedIcon.Visible = false
         minimizedIcon.Parent = screenGui
         
-        local iconText = Instance.new("TextLabel")
-        iconText.Size = UDim2.new(1, 0, 1, 0)
-        iconText.BackgroundTransparency = 1
-        iconText.TextColor3 = Color3.fromRGB(255, 255, 255)
-        iconText.Text = "🥰"
-        iconText.Font = Enum.Font.GothamBold
-        iconText.TextSize = 20
-        iconText.Parent = minimizedIcon
+        minimizedIcon.MouseButton1Click:Connect(function()
+            minimizedIcon.Visible = false
+            mainFrame.Visible = true
+        end)
         
         -- Main frame
         mainFrame = Instance.new("Frame")
@@ -75,7 +74,7 @@ return function(S, C, KillAura, Stockpile)
         title.Size = UDim2.new(1, -35, 0, 30)
         title.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
         title.TextColor3 = Color3.fromRGB(255, 255, 255)
-        title.Text = "AntiCheat v3"
+        title.Text = "Harbor Defender"
         title.Font = Enum.Font.GothamBold
         title.TextSize = 16
         title.Parent = mainFrame
@@ -90,16 +89,6 @@ return function(S, C, KillAura, Stockpile)
         minBtn.Font = Enum.Font.GothamBold
         minBtn.TextSize = 18
         minBtn.Parent = mainFrame
-        
-        -- Minimize/maximize toggle
-        minimizedIcon.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 or 
-               input.UserInputType == Enum.UserInputType.Touch then
-                minimizedIcon.Visible = false
-                mainFrame.Visible = true
-            end
-        end)
-
         minBtn.MouseButton1Click:Connect(function()
             mainFrame.Visible = false
             minimizedIcon.Visible = true
@@ -140,11 +129,10 @@ return function(S, C, KillAura, Stockpile)
     end
     
     function GuiCore.destroy()
-        if screenGui then screenGui:Destroy(); screenGui = nil end
-    end
-
-    function GuiCore.isActive()
-        return killAuraEnabled or loopkillEnabled or rpgBlockEnabled or ffRefreshEnabled
+        if screenGui then
+            screenGui:Destroy()
+            screenGui = nil
+        end
     end
     
     return GuiCore
