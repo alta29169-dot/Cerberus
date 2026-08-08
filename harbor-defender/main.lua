@@ -15,13 +15,15 @@ local Stockpile = M.stockpile(S, C, Utils)
 local KillAura = M.killaura(S, C, Utils, Teleport, Stockpile)
 local Loopkill = M.loopkill(S, C, Utils, Teleport, Stockpile, KillAura)
 local RpgBlock = M.rpgblock(S, C, Utils, Stockpile)
+local Gui = M.gui(S, C, KillAura, Loopkill, Stockpile, RpgBlock)
 
 local initialized = false
+local lastFFRefresh = 0
 
--- Stockpile maintenance loop (with initial delay)
+-- Stockpile maintenance loop
 local function stockpileLoop()
-    -- Wait for setup to complete
-    task.wait(3)  -- Give time for teleport + anti-gravity to settle
+    -- Wait for setup to complete before firing
+    task.wait(3)
     
     while true do
         if initialized then
@@ -42,8 +44,8 @@ task.spawn(function()
         if initialized then
             Teleport.maintainFloat()
             
-            -- Refresh FF every 5 seconds
-            if tick() - lastFFRefresh >= C.FF_REFRESH_INTERVAL then
+            -- Refresh FF if toggle is on
+            if Gui.isFFRefreshEnabled() and tick() - lastFFRefresh >= C.FF_REFRESH_INTERVAL then
                 pcall(function() S.Remote:FireServer("Teleport", { "Harbour", "" }) end)
                 lastFFRefresh = tick()
             end
@@ -52,9 +54,9 @@ task.spawn(function()
     end
 end)
 
--- RPG Block loop (every frame via Heartbeat)
+-- RPG Block loop (every frame via Heartbeat, respects toggle)
 S.RunService.Heartbeat:Connect(function()
-    if initialized then
+    if initialized and Gui.isRpgBlockEnabled() then
         RpgBlock.cleanup()
         RpgBlock.run()
     end
@@ -67,9 +69,11 @@ S.LocalPlayer.CharacterAdded:Connect(function()
     Teleport.cleanup()
     Stockpile.clear()
     RpgBlock.clear()
+    Gui.destroy()
     task.wait(0.5)
     Teleport.toHarbor()
     Teleport.setupAntiGravity()
+    Gui.init()
     lastFFRefresh = tick()
     initialized = true
 end)
@@ -77,6 +81,7 @@ end)
 -- Init
 Teleport.toHarbor()
 Teleport.setupAntiGravity()
+Gui.init()
 lastFFRefresh = tick()
 initialized = true
 
@@ -91,4 +96,4 @@ print("   FF users: Kill Aura (M1 Garand)")
 print("   Non-FF users: Stockpile blast")
 print("   Loopkill: teleported into stockpile until they leave")
 print("   RPG Block: all enemy missiles absorbed")
-print("   FF Refresh: every 5 seconds")
+print("   FF Refresh: every", C.FF_REFRESH_INTERVAL, "seconds")
