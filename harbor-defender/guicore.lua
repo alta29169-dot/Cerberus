@@ -7,11 +7,11 @@ return function(S, C, KillAura, Stockpile)
     local tabFrames = {}
     
     -- Global toggles
-    local killAuraEnabled = true
-    local killAuraTpEnabled = true
-    local loopkillEnabled = true
-    local rpgBlockEnabled = true
-    local ffRefreshEnabled = true
+    local killAuraEnabled = false
+    local killAuraTpEnabled = false
+    local loopkillEnabled = false
+    local rpgBlockEnabled = false
+    local ffRefreshEnabled = false
     
     function GuiCore.getScreenGui() return screenGui end
     function GuiCore.getMainFrame() return mainFrame end
