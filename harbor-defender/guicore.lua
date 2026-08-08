@@ -54,7 +54,7 @@ return function(S, C, KillAura, Stockpile)
         iconText.Size = UDim2.new(1, 0, 1, 0)
         iconText.BackgroundTransparency = 1
         iconText.TextColor3 = Color3.fromRGB(255, 255, 255)
-        iconText.Text = "🛡️"
+        iconText.Text = "🥰"
         iconText.Font = Enum.Font.GothamBold
         iconText.TextSize = 20
         iconText.Parent = minimizedIcon
