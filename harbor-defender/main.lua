@@ -66,6 +66,8 @@ task.spawn(function()
         local isEnabled = GuiCore.isMasterEnabled()
         if isEnabled and not wasEnabled then
             if initialized then
+                Teleport.toHarbor()
+                task.wait(2)
                 Teleport.setupAntiGravity()
             end
             print("🟢 Harbor Defender activated")
@@ -87,7 +89,6 @@ S.LocalPlayer.CharacterAdded:Connect(function()
     RpgBlock.clear()
     GuiCore.destroy()
     task.wait(0.5)
-    Teleport.toHarbor()
     GuiCore.init()
     GuiToggles.init()
     GuiTargets.init()
@@ -95,8 +96,7 @@ S.LocalPlayer.CharacterAdded:Connect(function()
     initialized = true
 end)
 
--- Init
-Teleport.toHarbor()
+-- Init (no teleport, no float)
 GuiCore.init()
 GuiToggles.init()
 GuiTargets.init()
