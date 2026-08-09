@@ -1,23 +1,23 @@
 return function(S, C, U)
     local Stockpile = {}
     local missiles = {}
-
     local stockpileIndex = 0
-    
+    local teleportIndex = 0
+
+    -- Get stockpile position spread in a ring
     local function getPosition()
         local char = S.LocalPlayer.Character
         if not char then return nil end
         local root = char:FindFirstChild("HumanoidRootPart")
         if not root then return nil end
         
-        -- Spread missiles in a circle around you
-        local angle = (stockpileIndex / C.STOCKPILE_MAX) * math.pi * 2
+        local angle = (stockpileIndex / math.max(C.STOCKPILE_MAX, 1)) * math.pi * 2
         local offset = Vector3.new(math.cos(angle) * C.STOCKPILE_DISTANCE, 0, math.sin(angle) * C.STOCKPILE_DISTANCE)
         stockpileIndex = stockpileIndex + 1
         
         return root.Position + offset
     end
-    
+
     -- Freeze a missile with physics constraints
     local function freeze(missile, position)
         for _, child in ipairs(missile:GetChildren()) do
@@ -38,7 +38,7 @@ return function(S, C, U)
         align.Parent = missile
         missile.Velocity = Vector3.zero
         missile.RotVelocity = Vector3.zero
-        missile.Transparency = 1
+        missile.Transparency = 0.8
         missiles[missile] = { attachment = att, align = align }
     end
 
@@ -72,25 +72,27 @@ return function(S, C, U)
         end
     end
 
-    -- Teleport an enemy directly onto a stockpiled missile
+    -- Teleport an enemy onto a stockpiled missile (cycles through them)
     function Stockpile.teleportEnemy(enemy)
         if not enemy then return false end
         local char = enemy.Character
         if not char then return false end
         local root = char:FindFirstChild("HumanoidRootPart")
         if not root then return false end
-    
-        -- Find the first available stockpiled missile
-        local missilePos = nil
+        
+        -- Build list of available missiles
+        local missileList = {}
         for missile, _ in pairs(missiles) do
             if missile and missile.Parent then
-                missilePos = missile.Position
-                break
+                table.insert(missileList, missile)
             end
         end
         
-        -- Fallback to stockpile spawn position if no missiles
-        if not missilePos then
+        local missilePos = nil
+        if #missileList > 0 then
+            teleportIndex = (teleportIndex % #missileList) + 1
+            missilePos = missileList[teleportIndex].Position
+        else
             missilePos = getPosition()
             if not missilePos then return false end
         end
@@ -124,6 +126,8 @@ return function(S, C, U)
             end
         end
         table.clear(missiles)
+        stockpileIndex = 0
+        teleportIndex = 0
     end
 
     return Stockpile
