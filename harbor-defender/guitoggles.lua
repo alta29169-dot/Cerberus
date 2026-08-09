@@ -11,9 +11,9 @@ return function(GuiCore)
         local masterBtn = Instance.new("TextButton")
         masterBtn.Size = UDim2.new(1, 0, 0, 40)
         masterBtn.Position = UDim2.new(0, 0, 0, yOff)
-        masterBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
+        masterBtn.BackgroundColor3 = GuiCore.isMasterEnabled() and Color3.fromRGB(50, 150, 50) or Color3.fromRGB(150, 50, 50)
         masterBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        masterBtn.Text = "MASTER: OFF"
+        masterBtn.Text = "MASTER: " .. (GuiCore.isMasterEnabled() and "ON" or "OFF")
         masterBtn.Font = Enum.Font.GothamBold
         masterBtn.TextSize = 16
         masterBtn.Parent = frame
