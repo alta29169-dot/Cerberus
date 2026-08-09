@@ -90,12 +90,34 @@ return function(S, C, U)
         end
     end
 
-    function Teleport.setNoClip(enabled)
+    local noClipRunning = false
+    
+    function Teleport.startNoClip()
+        if noClipRunning then return end
+        noClipRunning = true
+        task.spawn(function()
+            while noClipRunning do
+                local char = S.LocalPlayer.Character
+                if char then
+                    for _, part in ipairs(char:GetChildren()) do
+                        if part:IsA("BasePart") then
+                            part.CanCollide = false
+                        end
+                    end
+                end
+                task.wait(0.1)  -- Re-apply every 0.1s
+            end
+        end)
+    end
+    
+    function Teleport.stopNoClip()
+        noClipRunning = false
         local char = S.LocalPlayer.Character
-        if not char then return end
-        for _, part in ipairs(char:GetChildren()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = not enabled
+        if char then
+            for _, part in ipairs(char:GetChildren()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = true
+                end
             end
         end
     end
