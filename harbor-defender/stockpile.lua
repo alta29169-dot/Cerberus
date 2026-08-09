@@ -13,7 +13,7 @@ return function(S, C, U)
         if not root then return nil end
         
         local angle = (stockpileIndex / math.max(C.STOCKPILE_MAX, 1)) * math.pi * 2
-        local randomY = (math.random() - 0.5) * 20  -- Random Y between -10 and +10
+        local randomY = (math.random() - 0.5) * 40  -- Random Y between -10 and +10
         local offset = Vector3.new(
             math.cos(angle) * C.STOCKPILE_DISTANCE,
             randomY,
