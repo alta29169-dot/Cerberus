@@ -19,6 +19,7 @@ return function(S, C, U, Stockpile)
 
         for _, child in ipairs(S.Workspace:GetChildren()) do
             if child.Name == "Missile" and child:IsA("BasePart") then
+                child.Transparency = 1
                 -- SKIP if this missile is in our stockpile
                 if Stockpile.isStockpiled(child) then continue end
 
