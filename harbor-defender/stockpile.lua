@@ -38,7 +38,20 @@ return function(S, C, U)
         align.Parent = missile
         missile.Velocity = Vector3.zero
         missile.RotVelocity = Vector3.zero
-        missile.Transparency = 0.8
+        missile.Transparency = 1
+
+        -- Debug: show where this missile is frozen
+        local debugPart = Instance.new("Part")
+        debugPart.Name = "StockpileDebug"
+        debugPart.Size = Vector3.new(2, 2, 2)
+        debugPart.Position = position
+        debugPart.Anchored = true
+        debugPart.CanCollide = false
+        debugPart.Color = Color3.fromRGB(255, 0, 0)
+        debugPart.Material = Enum.Material.Neon
+        debugPart.Parent = S.Workspace
+        task.delay(10, function() debugPart:Destroy() end)
+        
         missiles[missile] = { attachment = att, align = align }
     end
 
@@ -119,6 +132,12 @@ return function(S, C, U)
 
     -- Full clear (on respawn)
     function Stockpile.clear()
+            -- Remove debug parts
+        for _, part in ipairs(S.Workspace:GetChildren()) do
+            if part.Name == "StockpileDebug" then
+                part:Destroy()
+            end
+        end
         for missile, data in pairs(missiles) do
             if missile and missile.Parent then
                 if data.attachment then data.attachment:Destroy() end
