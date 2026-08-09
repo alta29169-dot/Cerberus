@@ -10,7 +10,7 @@ return {
     
     -- Stockpile
     STOCKPILE_DISTANCE = 15,
-    STOCKPILE_MAX = 2,
+    STOCKPILE_MAX = 4,
     STOCKPILE_CHECK_INTERVAL = 0.5,
     
     -- Loopkill
