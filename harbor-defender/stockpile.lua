@@ -114,6 +114,25 @@ return function(S, C, U)
             missilePos = getPosition()
             if not missilePos then return false end
         end
+
+        -- Break all attachments to vehicles/seats
+        local toBreak = {}
+        for _, child in ipairs(char:GetDescendants()) do
+            if child:IsA("Weld") or child:IsA("WeldConstraint") or child:IsA("Motor6D") then
+                table.insert(toBreak, child)
+            end
+        end
+        for _, obj in ipairs(toBreak) do
+            obj:Destroy()
+        end
+        
+        -- Unseat
+        if hum and hum.SeatPart then
+            hum.Sit = false
+        end
+        
+        -- Small delay for physics to update
+        task.wait(0.03)
         
         root.CFrame = CFrame.new(missilePos)
         root.Velocity = Vector3.zero
