@@ -69,10 +69,12 @@ task.spawn(function()
                 Teleport.toHarbor()
                 task.wait(2)
                 Teleport.setupAntiGravity()
+                Teleport.setNoClip(true)
             end
             print("🟢 Harbor Defender activated")
         elseif not isEnabled and wasEnabled then
             Teleport.cleanup()
+            Teleport.setNoClip(false)
             print("🔴 Harbor Defender deactivated")
         end
         wasEnabled = isEnabled
@@ -89,6 +91,7 @@ S.LocalPlayer.CharacterAdded:Connect(function()
     RpgBlock.clear()
     GuiCore.destroy()
     task.wait(0.5)
+    Teleport.setNoClip(false)
     GuiCore.init()
     GuiToggles.init()
     GuiTargets.init()
