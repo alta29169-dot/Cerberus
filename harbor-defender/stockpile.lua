@@ -3,8 +3,9 @@ return function(S, C, U)
     local missiles = {}
     local stockpileIndex = 0
     local teleportIndex = 0
+    local targetMissileMap = {}  -- [playerName] = missile
 
-    -- Get stockpile position 
+    -- Get stockpile position spread in a ring with random Y offset
     local function getPosition()
         local char = S.LocalPlayer.Character
         if not char then return nil end
@@ -44,7 +45,8 @@ return function(S, C, U)
         missile.Velocity = Vector3.zero
         missile.RotVelocity = Vector3.zero
         missile.Transparency = 1
-
+        missiles[missile] = { attachment = att, align = align }
+        
         -- Debug: show where this missile is frozen
         local debugPart = Instance.new("Part")
         debugPart.Name = "StockpileDebug"
@@ -56,8 +58,6 @@ return function(S, C, U)
         debugPart.Material = Enum.Material.Neon
         debugPart.Parent = S.Workspace
         task.delay(10, function() debugPart:Destroy() end)
-        
-        missiles[missile] = { attachment = att, align = align }
     end
 
     -- Fire RPG and freeze the resulting missile
@@ -86,17 +86,40 @@ return function(S, C, U)
         for missile, _ in pairs(missiles) do
             if not missile or not missile.Parent then
                 missiles[missile] = nil
+                -- Remove from target map
+                for name, m in pairs(targetMissileMap) do
+                    if m == missile then
+                        targetMissileMap[name] = nil
+                    end
+                end
             end
         end
     end
 
-    -- Teleport an enemy onto a stockpiled missile (cycles through them)
+    -- Teleport an enemy onto a stockpiled missile (locks each target to one missile)
     function Stockpile.teleportEnemy(enemy)
         if not enemy then return false end
         local char = enemy.Character
         if not char then return false end
         local root = char:FindFirstChild("HumanoidRootPart")
         if not root then return false end
+        
+        -- Unseat from any vehicle
+        local hum = char:FindFirstChild("Humanoid")
+        if hum and hum.SeatPart then
+            -- Break all attachments to vehicles/seats
+            local toBreak = {}
+            for _, child in ipairs(char:GetDescendants()) do
+                if child:IsA("Weld") or child:IsA("WeldConstraint") or child:IsA("Motor6D") then
+                    table.insert(toBreak, child)
+                end
+            end
+            for _, obj in ipairs(toBreak) do
+                obj:Destroy()
+            end
+            hum.Sit = false
+            task.wait(0.03)
+        end
         
         -- Build list of available missiles
         local missileList = {}
@@ -107,37 +130,25 @@ return function(S, C, U)
         end
         
         local missilePos = nil
-        if #missileList > 0 then
+        
+        -- Check if this target already has a missile assigned
+        local assignedMissile = targetMissileMap[enemy.Name]
+        if assignedMissile and assignedMissile.Parent then
+            missilePos = assignedMissile.Position
+        elseif #missileList > 0 then
+            -- Assign a new missile
             teleportIndex = (teleportIndex % #missileList) + 1
-            missilePos = missileList[teleportIndex].Position
+            assignedMissile = missileList[teleportIndex]
+            targetMissileMap[enemy.Name] = assignedMissile
+            missilePos = assignedMissile.Position
         else
             missilePos = getPosition()
             if not missilePos then return false end
         end
-
-        -- Break all attachments to vehicles/seats
-        local toBreak = {}
-        for _, child in ipairs(char:GetDescendants()) do
-            if child:IsA("Weld") or child:IsA("WeldConstraint") or child:IsA("Motor6D") then
-                table.insert(toBreak, child)
-            end
-        end
-        for _, obj in ipairs(toBreak) do
-            obj:Destroy()
-        end
-        
-        -- Unseat
-        if hum and hum.SeatPart then
-            hum.Sit = false
-        end
-        
-        -- Small delay for physics to update
-        task.wait(0.03)
         
         root.CFrame = CFrame.new(missilePos)
         root.Velocity = Vector3.zero
         root.RotVelocity = Vector3.zero
-        local hum = char:FindFirstChild("Humanoid")
         if hum then hum:MoveTo(missilePos) end
         return true
     end
@@ -156,7 +167,7 @@ return function(S, C, U)
 
     -- Full clear (on respawn)
     function Stockpile.clear()
-            -- Remove debug parts
+        -- Remove debug parts
         for _, part in ipairs(S.Workspace:GetChildren()) do
             if part.Name == "StockpileDebug" then
                 part:Destroy()
@@ -169,6 +180,7 @@ return function(S, C, U)
             end
         end
         table.clear(missiles)
+        table.clear(targetMissileMap)
         stockpileIndex = 0
         teleportIndex = 0
     end
