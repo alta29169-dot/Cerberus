@@ -59,7 +59,7 @@ S.RunService.Heartbeat:Connect(function()
     end
 end)
 
--- Master toggle watcher (activates/deactivates float)
+-- Master toggle watcher (for manual toggles during gameplay)
 task.spawn(function()
     local wasEnabled = false
     while true do
@@ -71,11 +71,11 @@ task.spawn(function()
                 Teleport.setupAntiGravity()
                 Teleport.startNoClip()
             end
-            print("🟢 Harbor Defender activated")
+            print("[Main] Harbor Defender activated")
         elseif not isEnabled and wasEnabled then
             Teleport.cleanup()
             Teleport.stopNoClip()
-            print("🔴 Harbor Defender deactivated")
+            print("[Main] Harbor Defender deactivated")
         end
         wasEnabled = isEnabled
         task.wait(0.5)
@@ -84,7 +84,7 @@ end)
 
 -- Respawn handler
 S.LocalPlayer.CharacterAdded:Connect(function()
-    print("🔄 Character respawned — re-initializing...")
+    print("[Main] Character respawned — re-initializing...")
     initialized = false
     Teleport.stopNoClip()
     Teleport.cleanup()
@@ -97,6 +97,15 @@ S.LocalPlayer.CharacterAdded:Connect(function()
     GuiTargets.init()
     lastFFRefresh = tick()
     initialized = true
+    
+    -- If master was on before death, re-enable everything
+    if GuiCore.isMasterEnabled() then
+        Teleport.toHarbor()
+        task.wait(2)
+        Teleport.setupAntiGravity()
+        Teleport.startNoClip()
+        print("[Main] Harbor Defender re-activated after respawn")
+    end
 end)
 
 -- Init (no teleport, no float)
@@ -110,4 +119,4 @@ task.spawn(function() KillAura.run(function() return initialized end) end)
 task.spawn(stockpileLoop)
 task.spawn(function() Loopkill.run(function() return initialized end) end)
 
-print("✅ Harbor Defender loaded (dormant — use MASTER toggle in GUI)")
+print("[Main] Harbor Defender loaded (dormant — use MASTER toggle in GUI)")
