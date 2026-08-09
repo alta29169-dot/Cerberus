@@ -2,13 +2,20 @@ return function(S, C, U)
     local Stockpile = {}
     local missiles = {}
 
-    -- Get stockpile position 15 studs ahead
+    local stockpileIndex = 0
+    
     local function getPosition()
         local char = S.LocalPlayer.Character
         if not char then return nil end
         local root = char:FindFirstChild("HumanoidRootPart")
         if not root then return nil end
-        return root.Position + (root.CFrame.LookVector * C.STOCKPILE_DISTANCE)
+        
+        -- Spread missiles in a circle around you
+        local angle = (stockpileIndex / C.STOCKPILE_MAX) * math.pi * 2
+        local offset = Vector3.new(math.cos(angle) * C.STOCKPILE_DISTANCE, 0, math.sin(angle) * C.STOCKPILE_DISTANCE)
+        stockpileIndex = stockpileIndex + 1
+        
+        return root.Position + offset
     end
     
     -- Freeze a missile with physics constraints
