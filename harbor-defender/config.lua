@@ -9,7 +9,7 @@ return {
     KILL_RANGE = 300,
     
     -- Stockpile
-    STOCKPILE_DISTANCE = 15,
+    STOCKPILE_DISTANCE = 1500,
     STOCKPILE_MAX = 4,
     STOCKPILE_CHECK_INTERVAL = 0.5,
     
