@@ -4,7 +4,7 @@ return function(S, C, U)
     local stockpileIndex = 0
     local teleportIndex = 0
 
-    -- Get stockpile position spread in a ring
+    -- Get stockpile position 
     local function getPosition()
         local char = S.LocalPlayer.Character
         if not char then return nil end
@@ -12,7 +12,12 @@ return function(S, C, U)
         if not root then return nil end
         
         local angle = (stockpileIndex / math.max(C.STOCKPILE_MAX, 1)) * math.pi * 2
-        local offset = Vector3.new(math.cos(angle) * C.STOCKPILE_DISTANCE, 0, math.sin(angle) * C.STOCKPILE_DISTANCE)
+        local randomY = (math.random() - 0.5) * 20  -- Random Y between -10 and +10
+        local offset = Vector3.new(
+            math.cos(angle) * C.STOCKPILE_DISTANCE,
+            randomY,
+            math.sin(angle) * C.STOCKPILE_DISTANCE
+        )
         stockpileIndex = stockpileIndex + 1
         
         return root.Position + offset
