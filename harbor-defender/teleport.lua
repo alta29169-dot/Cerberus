@@ -90,6 +90,16 @@ return function(S, C, U)
         end
     end
 
+    function Teleport.setNoClip(enabled)
+        local char = S.LocalPlayer.Character
+        if not char then return end
+        for _, part in ipairs(char:GetChildren()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = not enabled
+            end
+        end
+    end
+
     function Teleport.cleanup()
         initialized = false
         isFloating = false
