@@ -1,5 +1,5 @@
 return {
-    HARBOR_RANGE = 1000,
+    HARBOR_RANGE = 2000,
     FLOAT_HEIGHT = 200,
     
     -- Kill Aura
