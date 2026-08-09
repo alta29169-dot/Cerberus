@@ -1,3 +1,5 @@
+local _persistentMaster = false
+
 return function(S, C, Stockpile)
     local GuiCore = {}
     
@@ -7,7 +9,7 @@ return function(S, C, Stockpile)
     local tabFrames = {}
     
     -- Global toggles (all OFF by default)
-    local masterEnabled = false  -- OFF by default
+    local masterEnabled = _persistentMaster  -- OFF by default
 
     local killAuraEnabled = false
     local killAuraTpEnabled = false
@@ -22,7 +24,10 @@ return function(S, C, Stockpile)
     
     -- Toggle getters
     function GuiCore.isMasterEnabled() return masterEnabled end
-    function GuiCore.setMasterEnabled(v) masterEnabled = v end
+    function GuiCore.setMasterEnabled(v)
+        masterEnabled = v
+        _persistentMaster = v  -- save across respawns
+    end
     function GuiCore.isKillAuraEnabled() return killAuraEnabled end
     function GuiCore.isKillAuraTpEnabled() return killAuraTpEnabled end
     function GuiCore.isLoopkillEnabled() return loopkillEnabled end
