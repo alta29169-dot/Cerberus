@@ -14,7 +14,7 @@ local GITHUB_BRANCH = "main"
 local SUITES = {
     {
         name = "Refugium",
-        description = "Harbor Defense System",
+        description = "Defense System - Enable FF 1st btw",
         path = "Refugium/bootloader.lua"
     },
     -- Future suites go here:
