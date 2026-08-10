@@ -5,7 +5,7 @@
 ]]
 
 local GITHUB_USER = "alta29169-dot"
-local GITHUB_REPO = "Refugium"
+local GITHUB_REPO = "Cerberus"
 local GITHUB_BRANCH = "main"
 
 local function fetchAndRun(path)
