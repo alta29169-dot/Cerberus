@@ -8,11 +8,11 @@ return function(S, C, U)
     function Teleport.isFloating() return isFloating end
 
     function Teleport.toHarbor()
-        print("📡 Teleporting to harbor...")
+        print("[teleport] Teleporting to harbor...")
         pcall(function() S.Remote:FireServer("Teleport", { "Harbour", "" }) end)
         task.wait(2)
         initialized = true
-        print("✅ Harbor teleport complete")
+        print("[teleport] Harbor teleport complete")
     end
 
     function Teleport.setupAntiGravity()
