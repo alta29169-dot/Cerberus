@@ -1,5 +1,5 @@
 --[[
-    REFUGIUM GUI PICKER
+    GUI PICKER
     Simple menu to select which script suite to run
 ]]
 
