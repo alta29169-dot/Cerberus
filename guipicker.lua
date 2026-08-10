@@ -17,12 +17,11 @@ local SUITES = {
         description = "RPG EMP + kill field",
         path = "Refugium/bootloader.lua"
     },
-    -- Future suites go here:
-    -- {
-    --     name = "OrbitKiller",
-    --     description = "Orbital Dock Attacker",
-    --     path = "OrbitKiller/bootloader.lua"
-    -- },
+    {
+        name = "Offensive System",
+        description = "Orbital RPG Spam + Orbit + FF",
+        path = "Golgotha/bootloader.lua"
+    },
 }
 
 -- Create the picker GUI
