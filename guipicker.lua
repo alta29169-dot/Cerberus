@@ -19,7 +19,7 @@ local SUITES = {
     },
     {
         name = "Offensive System",
-        description = "Orbital RPG Spam + Orbit + FF",
+        description = "Orbital RPG Spam + Orbit + FF (WIP BUGS)",
         path = "Golgotha/bootloader.lua"
     },
 }
