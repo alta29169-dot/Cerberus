@@ -13,8 +13,8 @@ local GITHUB_BRANCH = "main"
 -- Available suites
 local SUITES = {
     {
-        name = "Refugium",
-        description = "Defense System - Enable FF 1st btw",
+        name = "Defense System",
+        description = "RPG EMP + kill field",
         path = "Refugium/bootloader.lua"
     },
     -- Future suites go here:
