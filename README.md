@@ -1,3 +1,3 @@
-``
-loadstring(game:HttpGet("https://raw.githubusercontent.com/alta29169-dot/Refugium/refs/heads/main/bootloader.lua"))()
+`` Copy this and paste it onto your preferred executor
+loadstring(game:HttpGet("https://raw.githubusercontent.com/alta29169-dot/Cerberus/refs/heads/main/bootloader.lua"))()
 ``
