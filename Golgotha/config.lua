@@ -1,6 +1,6 @@
 return {
     ORBIT_RADIUS = 500,
-    Y_OFFSET = 75,
+    Y_OFFSET = 200,
     FIRE_COOLDOWN = 0.05,
     HARBOUR_INTERVAL = 10.0,
     ORBIT_INTERVAL = 0.5,
