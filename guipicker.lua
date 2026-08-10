@@ -14,7 +14,7 @@ local GITHUB_BRANCH = "main"
 local SUITES = {
     {
         name = "Refugium",
-        description = "Harbor Defender – Kill Aura + Stockpile + RPG Block",
+        description = "Harbor Defense System",
         path = "Refugium/bootloader.lua"
     },
     -- Future suites go here:
