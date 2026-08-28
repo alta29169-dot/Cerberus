@@ -25,6 +25,84 @@ local dockConnection = nil
 local timerConnection = nil
 
 -- ============================================
+-- ANTI-AFK SYSTEM (Delta Optimized)
+-- ============================================
+
+local function antiAFK()
+    print("[Anti-AFK] Initialized (keypress + jump + camera)")
+    
+    task.spawn(function()
+        while true do
+            -- Random wait between 25-75 seconds
+            local waitTime = math.random(250, 750) / 10
+            task.wait(waitTime)
+            
+            -- Randomly choose an action
+            local action = math.random(1, 3)
+            
+            if action == 1 then
+                -- Keypress (W, A, S, D)
+                if keypress then
+                    local keys = {"w", "a", "s", "d"}
+                    local key = keys[math.random(#keys)]
+                    
+                    -- Press and hold briefly
+                    keypress(key)
+                    task.wait(0.05)
+                    keypress(key) -- Release
+                    
+                    -- Sometimes double tap
+                    if math.random(1, 3) == 1 then
+                        task.wait(0.1)
+                        keypress(key)
+                        task.wait(0.05)
+                        keypress(key)
+                    end
+                end
+                
+            elseif action == 2 then
+                -- Jump
+                local character = player.Character
+                if character then
+                    local humanoid = character:FindFirstChildOfClass("Humanoid")
+                    if humanoid then
+                        humanoid:Jump()
+                        
+                        -- Sometimes jump twice
+                        if math.random(1, 3) == 1 then
+                            task.wait(0.2)
+                            humanoid:Jump()
+                        end
+                    end
+                end
+                
+            elseif action == 3 then
+                -- Camera rotation (look around)
+                local character = player.Character
+                if character then
+                    local hrp = character:FindFirstChild("HumanoidRootPart")
+                    if hrp and workspace.CurrentCamera then
+                        local currentCF = workspace.CurrentCamera.CFrame
+                        local angle = math.rad(math.random(-20, 20))
+                        local newCF = currentCF * CFrame.Angles(0, angle, 0)
+                        workspace.CurrentCamera.CFrame = newCF
+                        
+                        -- Sometimes look up/down too
+                        if math.random(1, 2) == 1 then
+                            local vertAngle = math.rad(math.random(-10, 10))
+                            workspace.CurrentCamera.CFrame = newCF * CFrame.Angles(vertAngle, 0, 0)
+                        end
+                    end
+                end
+            end
+        end
+    end)
+end
+
+-- Start anti-AFK immediately
+antiAFK()
+
+-- ============================================
 -- HELPER FUNCTIONS
 -- ============================================
 
@@ -275,7 +353,7 @@ local function canFire()
 end
 
 local function fireRPG()
-    print("[FIRE] Attempting to fire RPG...")  -- Add this
+    print("[FIRE] Attempting to fire RPG...")
     
     local event = ReplicatedStorage:FindFirstChild("Event")
     if not event then 
