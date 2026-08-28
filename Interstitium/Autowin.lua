@@ -1,4 +1,4 @@
--- LocalScript (StarterPlayerScripts)
+-- LocalScript (StarterPlayerScripts) which is heall yeah
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -23,6 +23,7 @@ local isFiring = false
 local floatData = {}
 local dockConnection = nil
 local timerConnection = nil
+local isNoRender = false
 
 -- ============================================
 -- ANTI-AFK SYSTEM (Delta Optimized)
@@ -33,25 +34,19 @@ local function antiAFK()
     
     task.spawn(function()
         while true do
-            -- Random wait between 25-75 seconds
             local waitTime = math.random(250, 750) / 10
             task.wait(waitTime)
             
-            -- Randomly choose an action
             local action = math.random(1, 3)
             
             if action == 1 then
-                -- Keypress (W, A, S, D)
                 if keypress then
                     local keys = {"w", "a", "s", "d"}
                     local key = keys[math.random(#keys)]
-                    
-                    -- Press and hold briefly
                     keypress(key)
                     task.wait(0.05)
-                    keypress(key) -- Release
+                    keypress(key)
                     
-                    -- Sometimes double tap
                     if math.random(1, 3) == 1 then
                         task.wait(0.1)
                         keypress(key)
@@ -61,14 +56,11 @@ local function antiAFK()
                 end
                 
             elseif action == 2 then
-                -- Jump
                 local character = player.Character
                 if character then
                     local humanoid = character:FindFirstChildOfClass("Humanoid")
                     if humanoid then
                         humanoid:Jump()
-                        
-                        -- Sometimes jump twice
                         if math.random(1, 3) == 1 then
                             task.wait(0.2)
                             humanoid:Jump()
@@ -77,7 +69,6 @@ local function antiAFK()
                 end
                 
             elseif action == 3 then
-                -- Camera rotation (look around)
                 local character = player.Character
                 if character then
                     local hrp = character:FindFirstChild("HumanoidRootPart")
@@ -87,7 +78,6 @@ local function antiAFK()
                         local newCF = currentCF * CFrame.Angles(0, angle, 0)
                         workspace.CurrentCamera.CFrame = newCF
                         
-                        -- Sometimes look up/down too
                         if math.random(1, 2) == 1 then
                             local vertAngle = math.rad(math.random(-10, 10))
                             workspace.CurrentCamera.CFrame = newCF * CFrame.Angles(vertAngle, 0, 0)
@@ -99,8 +89,28 @@ local function antiAFK()
     end)
 end
 
--- Start anti-AFK immediately
-antiAFK()
+-- ============================================
+-- NORENDER SYSTEM
+-- ============================================
+
+local function toggleNoRender(enable)
+    if isNoRender == enable then return end
+    
+    local success, err = pcall(function()
+        RunService:Set3dRenderingEnabled(not enable)
+    end)
+    
+    if success then
+        isNoRender = enable
+        if enable then
+            print("[NoRender] ✅ 3D rendering disabled (white screen)")
+        else
+            print("[NoRender] ✅ 3D rendering re-enabled")
+        end
+    else
+        print("[NoRender] ❌ Failed: " .. tostring(err))
+    end
+end
 
 -- ============================================
 -- HELPER FUNCTIONS
@@ -133,7 +143,6 @@ local function getDock()
     return nil
 end
 
--- Get HP with automatic reconnection
 local function getDockHP()
     local dock = getDock()
     if dock then
@@ -145,7 +154,6 @@ local function getDockHP()
     return nil
 end
 
--- Get Timer with automatic reconnection
 local function getTimer()
     local timerFolder = Workspace:FindFirstChild("VariableFolder")
     if timerFolder then
@@ -157,7 +165,6 @@ local function getTimer()
     return nil
 end
 
--- Watch for HP instance changes
 local function watchHP()
     if dockConnection then
         dockConnection:Disconnect()
@@ -166,24 +173,21 @@ local function watchHP()
     
     local dock = getDock()
     if dock then
-        -- Watch for HP being added/removed
         dockConnection = dock.Parent.ChildAdded:Connect(function(child)
             if child.Name == "HP" and child:IsA("IntValue") then
                 print("[HP] HP instance added")
             end
         end)
         
-        -- Also watch for HP value changes
         local hpInt = dock.Parent:FindFirstChild("HP")
         if hpInt and hpInt:IsA("IntValue") then
             hpInt:GetPropertyChangedSignal("Value"):Connect(function()
-                -- HP changed, no action needed but we can log
+                -- HP changed, no action needed
             end)
         end
     end
 end
 
--- Watch for Timer instance changes
 local function watchTimer()
     if timerConnection then
         timerConnection:Disconnect()
@@ -192,18 +196,16 @@ local function watchTimer()
     
     local timerFolder = Workspace:FindFirstChild("VariableFolder")
     if timerFolder then
-        -- Watch for TimerVal being added/removed
         timerConnection = timerFolder.ChildAdded:Connect(function(child)
             if child.Name == "TimerVal" and child:IsA("IntValue") then
                 print("[Timer] TimerVal instance added")
             end
         end)
         
-        -- Also watch for TimerVal value changes
         local timerVal = timerFolder:FindFirstChild("TimerVal")
         if timerVal and timerVal:IsA("IntValue") then
             timerVal:GetPropertyChangedSignal("Value"):Connect(function()
-                -- Timer changed, no action needed but we can log
+                -- Timer changed, no action needed
             end)
         end
     end
@@ -215,11 +217,7 @@ end
 
 local function respawnCharacter()
     print("[Respawn] Character died, waiting for respawn...")
-    
-    -- Stop firing
     isFiring = false
-    
-    -- Clean up float
     cleanupFloat()
     
     if renderConn then
@@ -227,11 +225,8 @@ local function respawnCharacter()
         renderConn = nil
     end
     
-    -- Wait for character to respawn
     local character = player.CharacterAdded:Wait()
     print("[Respawn] Character respawned")
-    
-    -- Restart the setup
     task.wait(1)
     setup()
 end
@@ -317,7 +312,6 @@ local function lockAboveDock()
             return
         end
         
-        -- Re-get dock in case it moved
         local dock = getDock()
         if dock and alignPosition and hrp then
             local newPos = dock.Position + OFFSET
@@ -353,26 +347,15 @@ local function canFire()
 end
 
 local function fireRPG()
-    print("[FIRE] Attempting to fire RPG...")
-    
     local event = ReplicatedStorage:FindFirstChild("Event")
-    if not event then 
-        print("[FIRE] ❌ Event not found")
-        return false 
-    end
+    if not event then return false end
     
     local dock = getDock()
-    if not dock then 
-        print("[FIRE] ❌ No dock")
-        return false 
-    end
+    if not dock then return false end
     
     local pos = dock.Position
-    print("[FIRE]   Firing at: " .. tostring(pos.X) .. ", " .. tostring(pos.Y) .. ", " .. tostring(pos.Z))
-    
     equipTool("RPG")
     event:FireServer("fireRPG", { Vector3.new(pos.X, pos.Y, pos.Z) })
-    print("[FIRE]   Remote fired!")
     return true
 end
 
@@ -386,12 +369,10 @@ local function getFireDelay()
     
     local timeElapsed = ROUND_DURATION - timer
     
-    -- Late game: fast spam
     if timeElapsed >= STOP_TIME then
         return 0.05
     end
     
-    -- Early game: based on HP
     if hp > 20000 then
         return 0.5
     elseif hp > 10000 then
@@ -409,25 +390,21 @@ local function fireLoop(myGen)
     isFiring = true
     
     while currentGen == myGen and isFiring do
-        -- Check if we should fire
         if canFire() then
             fireRPG()
         end
         
-        -- Get adaptive delay
         local delay = getFireDelay()
         task.wait(delay)
         
-        -- If we're in late game, check more frequently
         local timer = getTimer()
         if timer then
             local timeElapsed = ROUND_DURATION - timer
             if timeElapsed >= STOP_TIME then
-                task.wait(0.05) -- Fast spam to finish
+                task.wait(0.05)
             end
         end
         
-        -- Check if we died
         if not player.Character then
             print("[FireLoop] Character died, stopping")
             isFiring = false
@@ -443,22 +420,21 @@ end
 function setup()
     print("[Setup] Starting...")
     
-    -- Increment generation to stop old loops
     currentGen = currentGen + 1 
     local myGen = currentGen
     
-    -- Stop firing
     isFiring = false
     task.wait(0.1)
     
-    -- Watch for changes
     watchHP()
     watchTimer()
-    
-    -- Lock above dock
     lockAboveDock()
     
-    -- Start firing
+    -- Enable NoRender AFTER everything is set up
+    if not isNoRender then
+        toggleNoRender(true)
+    end
+    
     isFiring = true
     task.spawn(fireLoop, myGen)
     
@@ -469,15 +445,12 @@ end
 -- EVENT HANDLING
 -- ============================================
 
--- Handle respawn
 player.CharacterAdded:Connect(function(character)
     print("[Event] Character added, waiting for setup...")
-    -- Wait for character to fully load
     task.wait(1)
     setup()
 end)
 
--- Handle character removal (death)
 player.CharacterRemoving:Connect(function()
     print("[Event] Character removed, cleaning up...")
     isFiring = false
@@ -488,7 +461,6 @@ player.CharacterRemoving:Connect(function()
     end
 end)
 
--- Handle team changes
 player:GetPropertyChangedSignal("Team"):Connect(function()
     print("[Event] Team changed, restarting...")
     isFiring = false
@@ -503,7 +475,6 @@ player:GetPropertyChangedSignal("Team"):Connect(function()
     end
 end)
 
--- Handle workspace changes (dock recreated)
 Workspace.ChildAdded:Connect(function(child)
     if child.Name == "USDock" or child.Name == "JapanDock" then
         print("[Event] Dock added, restarting...")
@@ -514,7 +485,6 @@ Workspace.ChildAdded:Connect(function(child)
     end
 end)
 
--- Handle VariableFolder changes (timer recreated)
 Workspace.ChildAdded:Connect(function(child)
     if child.Name == "VariableFolder" then
         print("[Event] VariableFolder added, updating timer watch...")
@@ -536,13 +506,14 @@ task.spawn(function()
         local isDead = not player.Character
         
         print(string.format(
-            "[Status] HP: %s | Timer: %s | Time: %d/%ds | CanFire: %s | Dead: %s",
+            "[Status] HP: %s | Timer: %s | Time: %d/%ds | CanFire: %s | Dead: %s | NoRender: %s",
             tostring(hp or "N/A"),
             tostring(timer or "N/A"),
             timeElapsed,
             ROUND_DURATION,
             tostring(canFireStatus),
-            tostring(isDead)
+            tostring(isDead),
+            tostring(isNoRender)
         ))
     end
 end)
@@ -552,6 +523,9 @@ end)
 -- ============================================
 
 print("[Init] Script loaded, waiting for character...")
+
+-- Start Anti-AFK immediately
+antiAFK()
 
 if player.Character then
     task.wait(1)
