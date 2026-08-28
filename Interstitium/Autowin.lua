@@ -290,11 +290,11 @@ local function fireRPG()
     end
     
     local pos = dock.Position
-    print("[FIRE] ✅ Firing at: " .. tostring(pos.X) .. ", " .. tostring(pos.Y) .. ", " .. tostring(pos.Z))
+    print("[FIRE]   Firing at: " .. tostring(pos.X) .. ", " .. tostring(pos.Y) .. ", " .. tostring(pos.Z))
     
     equipTool("RPG")
     event:FireServer("fireRPG", { Vector3.new(pos.X, pos.Y, pos.Z) })
-    print("[FIRE] ✅ Remote fired!")
+    print("[FIRE]   Remote fired!")
     return true
 end
 
