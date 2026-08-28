@@ -89,14 +89,14 @@ local function watchHP()
     local dock = getDock()
     if dock then
         -- Watch for HP being added/removed
-        dockConnection = dock.ChildAdded:Connect(function(child)
+        dockConnection = dock.Parent.ChildAdded:Connect(function(child)
             if child.Name == "HP" and child:IsA("IntValue") then
                 print("[HP] HP instance added")
             end
         end)
         
         -- Also watch for HP value changes
-        local hpInt = dock:FindFirstChild("HP")
+        local hpInt = dock.Parent:FindFirstChild("HP")
         if hpInt and hpInt:IsA("IntValue") then
             hpInt:GetPropertyChangedSignal("Value"):Connect(function()
                 -- HP changed, no action needed but we can log
