@@ -2,6 +2,7 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
 
 local player = Players.LocalPlayer
 local OFFSET = Vector3.new(0, 100, -150)
@@ -9,6 +10,7 @@ local fireCooldown = 2.13
 
 local renderConn = nil
 local currentGen = 0
+local floatData = {}
 
 local function equipTool(toolName)
     local character = player.Character
@@ -48,28 +50,86 @@ local function fireToDock(myGen)
     end
 end
 
+local function cleanupFloat()
+    if floatData.attachment then
+        floatData.attachment:Destroy()
+    end
+    if floatData.antiGravity then
+        floatData.antiGravity:Destroy()
+    end
+    if floatData.alignPosition then
+        floatData.alignPosition:Destroy()
+    end
+    floatData = {}
+end
+
 local function lockAboveDock()
+    cleanupFloat()
+    
     if renderConn then
         renderConn:Disconnect()
         renderConn = nil
     end
+    
     local character = player.Character or player.CharacterAdded:Wait()
     local hrp = character:WaitForChild("HumanoidRootPart")
     local humanoid = character:WaitForChild("Humanoid")
-
+    
     humanoid:ChangeState(Enum.HumanoidStateType.Physics)
     humanoid.AutoRotate = false
-
-    local myGen = currentGen  
+    
+    local dock = getDock()
+    if not dock then return end
+    
+    local targetPos = dock.Position + OFFSET
+    hrp.CFrame = CFrame.new(targetPos)
+    hrp.AssemblyLinearVelocity = Vector3.zero
+    hrp.AssemblyAngularVelocity = Vector3.zero
+    
+    local attachment = Instance.new("Attachment")
+    attachment.Name = "FloatAttachment"
+    attachment.Parent = hrp
+    
+    local antiGravity = Instance.new("VectorForce")
+    antiGravity.Name = "AntiGravity"
+    antiGravity.Attachment0 = attachment
+    antiGravity.RelativeTo = Enum.ActuatorRelativeTo.World
+    antiGravity.Force = Vector3.new(0, Workspace.Gravity * hrp.AssemblyMass, 0)
+    antiGravity.Parent = hrp
+    
+    local alignPosition = Instance.new("AlignPosition")
+    alignPosition.Name = "FloatAlign"
+    alignPosition.Attachment0 = attachment
+    alignPosition.Mode = Enum.PositionAlignmentMode.OneAttachment
+    alignPosition.Position = targetPos
+    alignPosition.MaxForce = hrp.AssemblyMass * 1000 
+    alignPosition.MaxVelocity = 50
+    alignPosition.Responsiveness = 200 
+    alignPosition.Enabled = true
+    alignPosition.Parent = hrp
+    
+    floatData = {
+        attachment = attachment,
+        antiGravity = antiGravity,
+        alignPosition = alignPosition
+    }
+    
+    local myGen = currentGen
     renderConn = RunService.Heartbeat:Connect(function()
         if currentGen ~= myGen then
             renderConn:Disconnect()
             renderConn = nil
             return
         end
+        
         local dock = getDock()
-        if dock and hrp then
-            hrp.CFrame = CFrame.new(dock.Position + OFFSET)
+        if dock and alignPosition then
+            local newPos = dock.Position + OFFSET
+            alignPosition.Position = newPos
+            
+            if hrp and hrp.AssemblyMass then
+                antiGravity.Force = Vector3.new(0, Workspace.Gravity * hrp.AssemblyMass, 0)
+            end
         end
     end)
 end
@@ -81,6 +141,14 @@ local function setup()
     lockAboveDock()
     task.spawn(fireToDock, myGen)
 end
+
+player.CharacterRemoving:Connect(function()
+    cleanupFloat()
+    if renderConn then
+        renderConn:Disconnect()
+        renderConn = nil
+    end
+end)
 
 player.CharacterAdded:Connect(setup)
 if player.Character then
