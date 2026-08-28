@@ -1,0 +1,624 @@
+-- LocalScript (StarterPlayerScripts)
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+
+local player = Players.LocalPlayer
+local Event = ReplicatedStorage:WaitForChild("Event")
+
+-- ============================================
+-- CONSTANTS
+-- ============================================
+
+local KILL_RANGE = 300
+local DETECTION_RANGE = math.huge
+local TELEPORT_OFFSET = Vector3.new(0, 100, 0)
+local FIRE_DELAY = 0.05
+local RESPAWN_WAIT = 3
+local FLOAT_HEIGHT = 100
+
+local BODY_PARTS = {
+    "Head",
+    "Torso",
+    "Right Arm",
+    "Left Arm",
+    "Right Leg",
+    "Left Leg"
+}
+
+-- ============================================
+-- STATE
+-- ============================================
+
+local isActive = false
+local isEnabled = _persistentEnabled
+local currentTarget = nil
+local fireLoopConn = nil
+local respawnPending = false
+local bodyPartIndex = 1
+
+local floatAttachment = nil
+local floatForce = nil
+local floatAlign = nil
+local currentFloatY = nil
+local isFloating = false
+
+local _persistentEnabled = false
+local isTransitioning = false 
+
+-- ============================================
+-- INFINITE AMMO PATCHER (unchanged)
+-- ============================================
+
+local function safecall(fn, ...)
+    local ok, a, b, c = pcall(fn, ...)
+    if ok then return a, b, c end
+    return nil
+end
+
+local function safe_table(fn)
+    local ok, t = pcall(fn)
+    return (ok and type(t) == "table") and t or {}
+end
+
+local function is_lua_closure(func)
+    if type(islclosure) ~= "function" then return false end
+    local ok, res = pcall(islclosure, func)
+    return ok and res
+end
+
+local function AvoidCrasher(fenv, inst)
+    if type(fenv) ~= "table" then return false end
+    for i, v in pairs(fenv) do
+        if i == "script" and typeof(v) == "Instance" and v.ClassName == inst.ClassName and v == inst then
+            return true
+        end
+    end
+    return false
+end
+
+local function LoopThroughTable(tab, inst, source)
+    if type(source) ~= "table" then return end
+    for _, v in pairs(source) do
+        if type(v) == "function" then
+            if is_lua_closure(v) then
+                local ok, fenv = pcall(getfenv, v)
+                if ok and fenv and AvoidCrasher(fenv, inst) then
+                    table.insert(tab, v)
+                end
+            end
+        end
+    end
+end
+
+local function GetFunctionsFromScript(inst)
+    local funcs = {}
+    LoopThroughTable(funcs, inst, safe_table(getgc))
+    LoopThroughTable(funcs, inst, safe_table(function() return debug and debug.getregistry and debug.getregistry() end))
+    return funcs
+end
+
+local function SafeGetConstants(f)
+    local ok, consts = pcall(function() return debug.getconstants(f) end)
+    if ok and type(consts) == "table" then return consts end
+    return {}
+end
+
+local function SafeGetUpvalue(f, idx)
+    local ok, val = pcall(function() return debug.getupvalue(f, idx) end)
+    if ok then return val end
+    return nil
+end
+
+local function SafeSetupValue(f, idx, val)
+    local ok = pcall(function() debug.setupvalue(f, idx, val) end)
+    return ok
+end
+
+local function SafeSetConstant(f, idx, val)
+    local ok = pcall(function() debug.setconstant(f, idx, val) end)
+    return ok
+end
+
+local function ChangeAmmoGun(gun)
+    if not gun or not gun:FindFirstChild("TriggerScript") then return end
+    local scriptInst = gun.TriggerScript
+    local funcs = GetFunctionsFromScript(scriptInst)
+    if #funcs == 0 then return end
+
+    for _, f in pairs(funcs) do
+        local consts = SafeGetConstants(f)
+
+        if table.find(consts, "Reloading...") then
+            local patched = false
+            for upi = 1, 20 do
+                local uv = SafeGetUpvalue(f, upi)
+                if type(uv) == "number" then
+                    if SafeSetupValue(f, upi, 99999999) then
+                        patched = true
+                        break
+                    end
+                end
+            end
+            if not patched then
+                pcall(function()
+                    if type(hookfunction) == "function" then
+                        hookfunction(f, function() end)
+                    end
+                end)
+            end
+        end
+
+        if table.find(consts, "Ray") then
+            for ci, c in ipairs(consts) do
+                if type(c) == "number" then
+                    if SafeSetConstant(f, ci, 999999999) then
+                        break
+                    end
+                end
+            end
+        end
+    end
+end
+
+local function PatchAllGunsInBackpack()
+    local backpack = player:FindFirstChild("Backpack")
+    if not backpack then return end
+    for _, item in pairs(backpack:GetChildren()) do
+        pcall(ChangeAmmoGun, item)
+    end
+end
+
+-- ============================================
+-- AUTO EQUIP RIFLE
+-- ============================================
+
+local function equipRifle()
+    local character = player.Character
+    if not character then return false end
+    
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if not humanoid then return false end
+    
+    local currentTool = character:FindFirstChildOfClass("Tool")
+    if currentTool and (currentTool.Name == "M1 Garand" or currentTool.Name == "Rifle") then
+        return true
+    end
+    
+    local backpack = player:FindFirstChild("Backpack")
+    if not backpack then return false end
+    
+    local rifle = backpack:FindFirstChild("M1 Garand") or backpack:FindFirstChild("Rifle")
+    if rifle then
+        humanoid:EquipTool(rifle)
+        return true
+    end
+    
+    return false
+end
+
+-- ============================================
+-- FLOAT / HOVER
+-- ============================================
+
+local function setupFloat(targetY)
+    local character = player.Character
+    if not character then return end
+    
+    local root = character:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+    
+    if floatAttachment then floatAttachment:Destroy() end
+    if floatForce then floatForce:Destroy() end
+    if floatAlign then floatAlign:Destroy() end
+    
+    currentFloatY = targetY
+    
+    floatAttachment = Instance.new("Attachment")
+    floatAttachment.Name = "FloatAttachment"
+    floatAttachment.Parent = root
+    
+    floatForce = Instance.new("VectorForce")
+    floatForce.Name = "FloatForce"
+    floatForce.Attachment0 = floatAttachment
+    floatForce.RelativeTo = Enum.ActuatorRelativeTo.World
+    floatForce.Parent = root
+    floatForce.Force = Vector3.new(0, Workspace.Gravity * root.AssemblyMass, 0)
+    
+    floatAlign = Instance.new("AlignPosition")
+    floatAlign.Name = "FloatAlign"
+    floatAlign.Attachment0 = floatAttachment
+    floatAlign.Mode = Enum.PositionAlignmentMode.OneAttachment
+    floatAlign.MaxForce = math.huge
+    floatAlign.Responsiveness = 200
+    floatAlign.Parent = root
+    
+    local targetPos = Vector3.new(root.Position.X, currentFloatY, root.Position.Z)
+    floatAlign.Position = targetPos
+    floatAlign.Enabled = true
+    
+    isFloating = true
+    
+    root.CFrame = CFrame.new(targetPos)
+    root.Velocity = Vector3.zero
+    root.RotVelocity = Vector3.zero
+end
+
+local function maintainFloat()
+    if not isFloating then return end
+    
+    local character = player.Character
+    if not character then return end
+    
+    local root = character:FindFirstChild("HumanoidRootPart")
+    if not root or not floatAlign then return end
+    
+    local targetPos = Vector3.new(root.Position.X, currentFloatY or root.Position.Y, root.Position.Z)
+    floatAlign.Position = targetPos
+end
+
+local function cleanupFloat()
+    isFloating = false
+    if floatAttachment then floatAttachment:Destroy() end
+    if floatForce then floatForce:Destroy() end
+    if floatAlign then floatAlign:Destroy() end
+    floatAttachment = nil
+    floatForce = nil
+    floatAlign = nil
+    currentFloatY = nil
+end
+
+-- ============================================
+-- HARBOUR SETUP
+-- ============================================
+
+-- ============================================
+-- HARBOUR SETUP (called when enabled)
+-- ============================================
+
+local function setupHarbour()
+    if not isEnabled then return end
+    pcall(function()
+        Event:FireServer("Teleport", { "Harbour", "" })
+    end)
+    task.wait(1) 
+end
+
+-- ============================================
+-- TARGET DETECTION
+-- ============================================
+
+local function isEnemy(playerToCheck)
+    if not playerToCheck or playerToCheck == player then return false end
+    if not player.Team or not playerToCheck.Team then return false end
+    if playerToCheck.Team == player.Team then return false end
+    
+    local character = playerToCheck.Character
+    if not character then return false end
+    
+    local inGame = character:FindFirstChild("InGame")
+    if not inGame or not inGame:IsA("StringValue") then return false end
+    
+    local hasRPG = false
+    for _, child in ipairs(character:GetChildren()) do
+        if child:IsA("Tool") and child.Name == "RPG" then
+            hasRPG = true
+            break
+        end
+    end
+    
+    return hasRPG
+end
+
+local function getValidTargets()
+    local targets = {}
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if isEnemy(plr) then
+            local character = plr.Character
+            local hrp = character and character:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                table.insert(targets, {
+                    player = plr,
+                    character = character,
+                    hrp = hrp,
+                    position = hrp.Position
+                })
+            end
+        end
+    end
+    return targets
+end
+
+local function getClosestTarget()
+    local character = player.Character
+    if not character then return nil end
+    
+    local hrp = character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return nil end
+    
+    local pos = hrp.Position
+    local targets = getValidTargets()
+    
+    if #targets == 0 then return nil end
+    
+    table.sort(targets, function(a, b)
+        local distA = (a.position - pos).Magnitude
+        local distB = (b.position - pos).Magnitude
+        return distA < distB
+    end)
+    
+    return targets[1]
+end
+
+-- ============================================
+-- FIRING LOGIC
+-- ============================================
+
+local function getNextBodyPart(character)
+    local partName = BODY_PARTS[bodyPartIndex]
+    bodyPartIndex = bodyPartIndex + 1
+    if bodyPartIndex > #BODY_PARTS then
+        bodyPartIndex = 1
+    end
+    return character:FindFirstChild(partName)
+end
+
+local function fireRifle(targetPlayer, targetCharacter)
+    if not targetPlayer or not targetCharacter then return false end
+    
+    local bodyPart = getNextBodyPart(targetCharacter)
+    if not bodyPart then
+        bodyPart = targetCharacter:FindFirstChild("Head")
+        if not bodyPart then return false end
+    end
+    
+    local humanoid = targetCharacter:FindFirstChildOfClass("Humanoid")
+    if not humanoid then return false end
+    
+    local success1 = pcall(function()
+        Event:FireServer("shootRifle", "hit", { humanoid })
+    end)
+    
+    if not success1 then return false end
+    
+    task.wait(0.03)
+    
+    local success2 = pcall(function()
+        Event:FireServer("shootRifle", "", { bodyPart })
+    end)
+    
+    if not success2 then return false end
+    
+    return true
+end
+
+local function teleportToTarget(targetPosition)
+    local character = player.Character
+    if not character then return end
+    
+    local root = character:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+    
+    local teleportPos = targetPosition + TELEPORT_OFFSET
+    root.CFrame = CFrame.new(teleportPos)
+    root.Velocity = Vector3.zero
+    root.RotVelocity = Vector3.zero
+    
+    setupFloat(teleportPos.Y)
+end
+
+-- ============================================
+-- KILL AURA LOOP
+-- ============================================
+
+local function killAuraLoop()
+    while isActive do
+        if not isEnabled then break end
+        
+        local target = getClosestTarget()
+        
+        if target then
+            currentTarget = target.player
+            equipRifle()
+            
+            local character = player.Character
+            local hrp = character and character:FindFirstChild("HumanoidRootPart")
+            local distance = hrp and (target.position - hrp.Position).Magnitude or math.huge
+            
+            if distance > KILL_RANGE then
+                teleportToTarget(target.position)
+            end
+            
+            fireRifle(target.player, target.character)
+            maintainFloat()
+        end
+        
+        task.wait(FIRE_DELAY)
+    end
+end
+
+local function startKillAura()
+    if isActive then return end
+    isActive = true
+    task.spawn(killAuraLoop)
+end
+
+local function stopKillAura()
+    isActive = false
+    cleanupFloat()
+    currentTarget = nil
+    isTransitioning = false
+end
+
+-- ============================================
+-- RESPAWN HANDLING
+-- ============================================
+
+local function onRespawn()
+    
+    isActive = false
+    cleanupFloat()
+    bodyPartIndex = 1
+    
+    task.wait(RESPAWN_WAIT)
+    
+    if isEnabled then
+        local needsSetup = true
+        local char = player.Character
+        if char then
+            local inGame = char:FindFirstChild("InGame")
+            if inGame and inGame:IsA("StringValue") and inGame.Value ~= "" then
+                needsSetup = false
+            end
+        end
+        
+        if needsSetup then
+            setupHarbour()
+            task.wait(0.5)
+        end
+        
+        PatchAllGunsInBackpack()
+        equipRifle()
+        startKillAura()
+    end
+end
+
+-- ============================================
+-- GUI
+-- ============================================
+
+local screenGui = nil
+local mainFrame = nil
+local toggleBtn = nil
+local statusLabel = nil
+
+local function createGUI()
+    if game:GetService("CoreGui"):FindFirstChild("KillAuraGUI") then
+        screenGui = game:GetService("CoreGui"):FindFirstChild("KillAuraGUI")
+        return  
+    end
+    
+    screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "KillAuraGUI"
+    screenGui.Parent = game:GetService("CoreGui")
+    
+    mainFrame = Instance.new("Frame")
+    mainFrame.Size = UDim2.new(0, 150, 0, 80)
+    mainFrame.Position = UDim2.new(1, -160, 0, 10)
+    mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    mainFrame.BackgroundTransparency = 0.1
+    mainFrame.BorderSizePixel = 0
+    mainFrame.Active = true
+    mainFrame.Draggable = true
+    mainFrame.Parent = screenGui
+    
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1, 0, 0, 25)
+    title.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    title.Text = "Kill Aura"
+    title.Font = Enum.Font.GothamBold
+    title.TextSize = 14
+    title.Parent = mainFrame
+    
+    toggleBtn = Instance.new("TextButton")
+    toggleBtn.Size = UDim2.new(1, -10, 0, 25)
+    toggleBtn.Position = UDim2.new(0, 5, 0, 30)
+    toggleBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
+    toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    toggleBtn.Text = "DISABLED"
+    toggleBtn.Font = Enum.Font.GothamBold
+    toggleBtn.TextSize = 13
+    toggleBtn.Parent = mainFrame
+    
+    statusLabel = Instance.new("TextLabel")
+    statusLabel.Size = UDim2.new(1, -10, 0, 15)
+    statusLabel.Position = UDim2.new(0, 5, 0, 58)
+    statusLabel.BackgroundTransparency = 1
+    statusLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+    statusLabel.Text = "Inactive"
+    statusLabel.Font = Enum.Font.Gotham
+    statusLabel.TextSize = 11
+    statusLabel.Parent = mainFrame
+
+    local mainCorner = Instance.new("UICorner")
+    mainCorner.CornerRadius = UDim.new(0, 10)
+    mainCorner.Parent = mainFrame
+    
+    local btnCorner = Instance.new("UICorner")
+    btnCorner.CornerRadius = UDim.new(0, 6)
+    btnCorner.Parent = toggleBtn
+    
+    local titleCorner = Instance.new("UICorner")
+    titleCorner.CornerRadius = UDim.new(0, 10)
+    titleCorner.Parent = title
+    
+    toggleBtn.MouseButton1Click:Connect(function()
+        if isTransitioning then return end 
+        isTransitioning = true
+        isEnabled = not isEnabled
+        
+        if isEnabled then
+            toggleBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
+            toggleBtn.Text = "ENABLED"
+            statusLabel.Text = "Setting up harbour..."
+            
+            task.spawn(function()
+                local needsSetup = true
+                local char = player.Character
+                if char then
+                    local inGame = char:FindFirstChild("InGame")
+                    if inGame and inGame:IsA("StringValue") and inGame.Value ~= "" then
+                        needsSetup = false
+                    end
+                end
+                
+                if needsSetup then
+                    setupHarbour()
+                    task.wait(0.5)
+                end
+                
+                PatchAllGunsInBackpack()
+                equipRifle()
+                startKillAura()
+                statusLabel.Text = "Active"
+                isTransitioning = false
+            end)
+        else
+            toggleBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
+            toggleBtn.Text = "DISABLED"
+            statusLabel.Text = "Inactive"
+            stopKillAura()
+            isTransitioning = false
+        end
+    end)
+end
+
+-- ============================================
+-- INITIALIZATION
+-- ============================================
+
+local function initialize() 
+    task.wait(1)  
+    
+    createGUI()
+    PatchAllGunsInBackpack()
+    
+    local backpack = player:FindFirstChild("Backpack")
+    if backpack then
+        backpack.ChildAdded:Connect(function(child)
+            task.defer(function() pcall(ChangeAmmoGun, child) end)
+        end)
+    end
+    
+    player.CharacterAdded:Connect(onRespawn)
+    
+    if player.Character then
+        task.wait(1)
+    else
+        player.CharacterAdded:Wait()
+    end
+end
+
+initialize()
