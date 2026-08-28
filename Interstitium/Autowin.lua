@@ -275,20 +275,27 @@ local function canFire()
 end
 
 local function fireRPG()
+    print("[FIRE] Attempting to fire RPG...")  -- Add this
+    
     local event = ReplicatedStorage:FindFirstChild("Event")
-    if not event then
-        -- Wait for event to exist
-        event = ReplicatedStorage:WaitForChild("Event", 5)
-        if not event then return end
+    if not event then 
+        print("[FIRE] ❌ Event not found")
+        return false 
     end
     
     local dock = getDock()
-    if dock then
-        local pos = dock.Position
-        if equipTool("RPG") then
-            event:FireServer("fireRPG", { Vector3.new(pos.X, pos.Y, pos.Z) })
-        end
+    if not dock then 
+        print("[FIRE] ❌ No dock")
+        return false 
     end
+    
+    local pos = dock.Position
+    print("[FIRE] ✅ Firing at: " .. tostring(pos.X) .. ", " .. tostring(pos.Y) .. ", " .. tostring(pos.Z))
+    
+    equipTool("RPG")
+    event:FireServer("fireRPG", { Vector3.new(pos.X, pos.Y, pos.Z) })
+    print("[FIRE] ✅ Remote fired!")
+    return true
 end
 
 local function getFireDelay()
