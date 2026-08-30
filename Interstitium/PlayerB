@@ -1,4 +1,4 @@
--- LocalScript (Alt Account) | Fuck me
+-- LocalScript (Alt Account)
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -7,14 +7,15 @@ local Workspace = game:GetService("Workspace")
 local LocalPlayer = Players.LocalPlayer
 
 -- ===== CONFIG =====
-local TARGET_NAME = "Andromodath"  
+local TARGET_NAME = "Andromodath"  -- Your main account name
 local HEIGHT_ABOVE_TARGET = 200
-local LAUNCH_VELOCITY = 500000
-local SCAN_INTERVAL = 0.1
+local LAUNCH_VELOCITY = 100000
+local SEAT_NAME = "SBTurretSeat"
 
 -- ===== STATE =====
 local bombData = {}
 local launchConn = nil
+local currentBomber = nil
 
 -- ==========================================
 -- BOOST SIMULATION RADIUS
@@ -23,7 +24,7 @@ local function boostSimulationRadius()
     pcall(function()
         sethiddenproperty(LocalPlayer, "SimulationRadius", 10000)
     end)
-    print("[Alt] Simulation radius boosted to 10000")
+    print("[Alt] Simulation radius boosted")
 end
 
 -- ==========================================
@@ -39,44 +40,48 @@ local function getTargetPlayer()
 end
 
 -- ==========================================
--- TELEPORT ABOVE TARGET
+-- SIT IN TARGET'S BOMBER (SBTurretSeat)
 -- ==========================================
-local function teleportAboveTarget(target)
-    if not target then return false end
+local function sitInTargetBomber()
+    -- Find bomber owned by target
+    local bomber = nil
+    for _, obj in ipairs(workspace:GetChildren()) do
+        if obj.Name == "Large Bomber" then
+            local owner = obj:FindFirstChild("Owner")
+            if owner and owner:IsA("StringValue") and owner.Value == TARGET_NAME then
+                bomber = obj
+                break
+            end
+        end
+    end
     
-    local char = target.Character
+    if not bomber then
+        print("[Alt] No Large Bomber owned by", TARGET_NAME)
+        return false
+    end
+    
+    local seat = bomber:FindFirstChild(SEAT_NAME)
+    if not seat or not seat:IsA("BasePart") then
+        print("[Alt] No", SEAT_NAME, "found")
+        return false
+    end
+    
+    local char = LocalPlayer.Character
     if not char then return false end
     
-    local targetRoot = char:FindFirstChild("HumanoidRootPart")
-    if not targetRoot then return false end
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return false end
     
-    local myChar = LocalPlayer.Character
-    if not myChar then return false end
+    -- Teleport into seat
+    hrp.CFrame = seat.CFrame + Vector3.new(0, 2, 0)
+    currentBomber = bomber
     
-    local myRoot = myChar:FindFirstChild("HumanoidRootPart")
-    if not myRoot then return false end
-    
-    -- Teleport 200 studs above target
-    local targetPos = targetRoot.Position + Vector3.new(0, HEIGHT_ABOVE_TARGET, 0)
-    myRoot.CFrame = CFrame.new(targetPos)
-    myRoot.Velocity = Vector3.zero
-    myRoot.RotVelocity = Vector3.zero
-    
+    print("[Alt] ✅ Seated in", TARGET_NAME .. "'s Large Bomber")
     return true
 end
 
 -- ==========================================
--- HOLD POSITION ABOVE TARGET
--- ==========================================
-local function holdAboveTarget()
-    local target = getTargetPlayer()
-    if not target then return end
-    
-    teleportAboveTarget(target)
-end
-
--- ==========================================
--- APPLY LAUNCH FORCE TO BOMB
+-- APPLY LAUNCH TO BOMB
 -- ==========================================
 local function applyLaunchToBomb(bomb)
     if not bomb or not bomb.Parent then return end
@@ -84,7 +89,7 @@ local function applyLaunchToBomb(bomb)
     
     bombData[bomb] = { launched = true }
     
-    -- Apply velocity over multiple frames so it doesn't flop
+    -- Apply velocity over multiple frames
     task.spawn(function()
         for i = 1, 10 do
             if bomb and bomb.Parent then
@@ -94,7 +99,7 @@ local function applyLaunchToBomb(bomb)
         end
     end)
     
-    print("[Alt] 🚀 Launched bomb at", LAUNCH_VELOCITY, "studs/s")
+    print("[Alt] 🚀 Launched bomb")
 end
 
 -- ==========================================
@@ -104,13 +109,18 @@ local function startLaunchLoop()
     if launchConn then launchConn:Disconnect() end
     
     launchConn = RunService.Heartbeat:Connect(function(dt)
-        -- Hold position above target
-        holdAboveTarget()
+        -- Check if still seated, re-sit if not
+        local char = LocalPlayer.Character
+        if char then
+            local humanoid = char:FindFirstChildOfClass("Humanoid")
+            if humanoid and not humanoid.SeatPart then
+                sitInTargetBomber()
+            end
+        end
         
-        -- Find bombs in workspace
-        for _, obj in ipairs(Workspace:GetChildren()) do
+        -- Find bombs and launch them
+        for _, obj in ipairs(workspace:GetChildren()) do
             if obj.Name == "Bomb" and obj:IsA("BasePart") and not bombData[obj] then
-                -- Only launch bombs near us (within 300 studs)
                 local myChar = LocalPlayer.Character
                 local myRoot = myChar and myChar:FindFirstChild("HumanoidRootPart")
                 if myRoot then
@@ -140,6 +150,7 @@ local function stopAll()
         launchConn = nil
     end
     table.clear(bombData)
+    currentBomber = nil
 end
 
 -- ==========================================
@@ -151,6 +162,8 @@ LocalPlayer.CharacterAdded:Connect(function()
     stopAll()
     task.wait(1)
     boostSimulationRadius()
+    task.wait(0.5)
+    sitInTargetBomber()
     startLaunchLoop()
 end)
 
@@ -161,10 +174,11 @@ boostSimulationRadius()
 
 if LocalPlayer.Character then
     task.wait(1)
+    sitInTargetBomber()
     startLaunchLoop()
 end
 
-print("🎯 Alt bomb launcher loaded")
+print("🎯 Alt turret gunner loaded")
 print("   Target:", TARGET_NAME)
-print("   Height above target:", HEIGHT_ABOVE_TARGET)
+print("   Seat:", SEAT_NAME)
 print("   Launch velocity:", LAUNCH_VELOCITY)
