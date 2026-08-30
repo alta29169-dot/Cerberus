@@ -9,7 +9,7 @@ local LocalPlayer = Players.LocalPlayer
 -- ===== CONFIG =====
 local TARGET_NAME = "Andromodath"  
 local HEIGHT_ABOVE_TARGET = 200
-local LAUNCH_VELOCITY = 100000
+local LAUNCH_VELOCITY = 500000
 local SCAN_INTERVAL = 0.1
 
 -- ===== STATE =====
