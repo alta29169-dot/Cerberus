@@ -7,15 +7,16 @@ local Workspace = game:GetService("Workspace")
 local LocalPlayer = Players.LocalPlayer
 
 -- ===== CONFIG =====
-local TARGET_NAME = "Andromodath"  -- Your main account name
-local HEIGHT_ABOVE_TARGET = 200
+local TARGET_NAME = "TargetPlayerName"
 local LAUNCH_VELOCITY = 100000
 local SEAT_NAME = "SBTurretSeat"
+local RESET_INTERVAL = 10  -- seconds between character resets
 
 -- ===== STATE =====
 local bombData = {}
 local launchConn = nil
 local currentBomber = nil
+local resetActive = false
 
 -- ==========================================
 -- BOOST SIMULATION RADIUS
@@ -40,10 +41,9 @@ local function getTargetPlayer()
 end
 
 -- ==========================================
--- SIT IN TARGET'S BOMBER (SBTurretSeat)
+-- SIT IN TARGET'S BOMBER
 -- ==========================================
 local function sitInTargetBomber()
-    -- Find bomber owned by target
     local bomber = nil
     for _, obj in ipairs(workspace:GetChildren()) do
         if obj.Name == "Large Bomber" then
@@ -72,12 +72,64 @@ local function sitInTargetBomber()
     local hrp = char:FindFirstChild("HumanoidRootPart")
     if not hrp then return false end
     
-    -- Teleport into seat
     hrp.CFrame = seat.CFrame + Vector3.new(0, 2, 0)
     currentBomber = bomber
     
     print("[Alt] ✅ Seated in", TARGET_NAME .. "'s Large Bomber")
     return true
+end
+
+-- ==========================================
+-- RESET CHARACTER (Leave seat, respawn, re-sit)
+-- ==========================================
+local function resetCharacter()
+    if resetActive then return end
+    resetActive = true
+    
+    print("[Alt] 🔄 Resetting character...")
+    
+    -- Stop launch loop
+    if launchConn then
+        launchConn:Disconnect()
+        launchConn = nil
+    end
+    
+    -- Leave seat
+    local char = LocalPlayer.Character
+    if char then
+        local humanoid = char:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid.Sit = false
+        end
+    end
+    
+    task.wait(0.5)
+    
+    -- Respawn character
+    if char then
+        local humanoid = char:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid.Health = 0  -- Kill ourselves to force respawn
+        end
+    end
+    
+    task.wait(3)  -- Wait for respawn
+    
+    -- Clear bomb data (fresh start)
+    table.clear(bombData)
+    
+    -- Boost simulation radius again (new character)
+    boostSimulationRadius()
+    
+    -- Re-sit
+    task.wait(1)
+    sitInTargetBomber()
+    
+    -- Restart launch loop
+    startLaunchLoop()
+    
+    resetActive = false
+    print("[Alt] ✅ Character reset complete")
 end
 
 -- ==========================================
@@ -89,7 +141,6 @@ local function applyLaunchToBomb(bomb)
     
     bombData[bomb] = { launched = true }
     
-    -- Apply velocity over multiple frames
     task.spawn(function()
         for i = 1, 10 do
             if bomb and bomb.Parent then
@@ -109,7 +160,7 @@ local function startLaunchLoop()
     if launchConn then launchConn:Disconnect() end
     
     launchConn = RunService.Heartbeat:Connect(function(dt)
-        -- Check if still seated, re-sit if not
+        -- Check if still seated
         local char = LocalPlayer.Character
         if char then
             local humanoid = char:FindFirstChildOfClass("Humanoid")
@@ -118,7 +169,7 @@ local function startLaunchLoop()
             end
         end
         
-        -- Find bombs and launch them
+        -- Find and launch bombs
         for _, obj in ipairs(workspace:GetChildren()) do
             if obj.Name == "Bomb" and obj:IsA("BasePart") and not bombData[obj] then
                 local myChar = LocalPlayer.Character
@@ -178,7 +229,17 @@ if LocalPlayer.Character then
     startLaunchLoop()
 end
 
-print("🎯 Alt turret gunner loaded")
+-- ==========================================
+-- RESET LOOP (every 10 seconds)
+-- ==========================================
+task.spawn(function()
+    while true do
+        task.wait(RESET_INTERVAL)
+        resetCharacter()
+    end
+end)
+
+print("🎯 Alt turret gunner loaded (with 10s reset cycle)")
 print("   Target:", TARGET_NAME)
 print("   Seat:", SEAT_NAME)
-print("   Launch velocity:", LAUNCH_VELOCITY)
+print("   Reset interval:", RESET_INTERVAL, "seconds")
