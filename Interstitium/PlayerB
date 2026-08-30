@@ -7,7 +7,7 @@ local Workspace = game:GetService("Workspace")
 local LocalPlayer = Players.LocalPlayer
 
 -- ===== CONFIG =====
-local TARGET_NAME = "TargetPlayerName"
+local TARGET_NAME = "Andromodath"
 local LAUNCH_VELOCITY = 100000
 local SEAT_NAME = "SBTurretSeat"
 local RESET_INTERVAL = 10  -- seconds between character resets
