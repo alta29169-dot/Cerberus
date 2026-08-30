@@ -1,0 +1,168 @@
+-- LocalScript (Alt Account)
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+
+local LocalPlayer = Players.LocalPlayer
+
+-- ===== CONFIG =====
+local TARGET_NAME = "Andromodath"  
+local HEIGHT_ABOVE_TARGET = 200
+local LAUNCH_VELOCITY = 100000
+local SCAN_INTERVAL = 0.1
+
+-- ===== STATE =====
+local bombData = {}
+local launchConn = nil
+
+-- ==========================================
+-- BOOST SIMULATION RADIUS
+-- ==========================================
+local function boostSimulationRadius()
+    pcall(function()
+        sethiddenproperty(LocalPlayer, "SimulationRadius", 10000)
+    end)
+    print("[Alt] Simulation radius boosted to 10000")
+end
+
+-- ==========================================
+-- GET TARGET PLAYER
+-- ==========================================
+local function getTargetPlayer()
+    for _, pl in ipairs(Players:GetPlayers()) do
+        if pl.Name == TARGET_NAME and pl ~= LocalPlayer then
+            return pl
+        end
+    end
+    return nil
+end
+
+-- ==========================================
+-- TELEPORT ABOVE TARGET
+-- ==========================================
+local function teleportAboveTarget(target)
+    if not target then return false end
+    
+    local char = target.Character
+    if not char then return false end
+    
+    local targetRoot = char:FindFirstChild("HumanoidRootPart")
+    if not targetRoot then return false end
+    
+    local myChar = LocalPlayer.Character
+    if not myChar then return false end
+    
+    local myRoot = myChar:FindFirstChild("HumanoidRootPart")
+    if not myRoot then return false end
+    
+    -- Teleport 200 studs above target
+    local targetPos = targetRoot.Position + Vector3.new(0, HEIGHT_ABOVE_TARGET, 0)
+    myRoot.CFrame = CFrame.new(targetPos)
+    myRoot.Velocity = Vector3.zero
+    myRoot.RotVelocity = Vector3.zero
+    
+    print("[Alt] Teleported above", TARGET_NAME, "at", targetPos)
+    return true
+end
+
+-- ==========================================
+-- HOLD POSITION ABOVE TARGET
+-- ==========================================
+local function holdAboveTarget()
+    local target = getTargetPlayer()
+    if not target then return end
+    
+    teleportAboveTarget(target)
+end
+
+-- ==========================================
+-- APPLY LAUNCH FORCE TO BOMB
+-- ==========================================
+local function applyLaunchToBomb(bomb)
+    if not bomb or not bomb.Parent then return end
+    if bombData[bomb] then return end
+    
+    -- Track the bomb
+    bombData[bomb] = {
+        launched = false
+    }
+    
+    -- Apply upward velocity
+    bomb.AssemblyLinearVelocity = Vector3.new(0, LAUNCH_VELOCITY, 0)
+    bombData[bomb].launched = true
+    
+    print("[Alt] 🚀 Launched bomb at", LAUNCH_VELOCITY, "studs/s")
+end
+
+-- ==========================================
+-- MAIN LAUNCH LOOP
+-- ==========================================
+local function startLaunchLoop()
+    if launchConn then launchConn:Disconnect() end
+    
+    launchConn = RunService.Heartbeat:Connect(function(dt)
+        -- Hold position above target
+        holdAboveTarget()
+        
+        -- Find bombs in workspace
+        for _, obj in ipairs(Workspace:GetChildren()) do
+            if obj.Name == "Bomb" and obj:IsA("BasePart") and not bombData[obj] then
+                -- Only launch bombs near us (within 300 studs)
+                local myChar = LocalPlayer.Character
+                local myRoot = myChar and myChar:FindFirstChild("HumanoidRootPart")
+                if myRoot then
+                    local dist = (obj.Position - myRoot.Position).Magnitude
+                    if dist <= 300 then
+                        applyLaunchToBomb(obj)
+                    end
+                end
+            end
+        end
+        
+        -- Clean up destroyed bombs
+        for bomb, data in pairs(bombData) do
+            if not bomb.Parent then
+                bombData[bomb] = nil
+            end
+        end
+    end)
+end
+
+-- ==========================================
+-- STOP ALL
+-- ==========================================
+local function stopAll()
+    if launchConn then
+        launchConn:Disconnect()
+        launchConn = nil
+    end
+    table.clear(bombData)
+end
+
+-- ==========================================
+-- RESPAWN HANDLER
+-- ==========================================
+LocalPlayer.CharacterAdded:Connect(function()
+    print("[Alt] Respawn detected — waiting...")
+    task.wait(3)
+    stopAll()
+    task.wait(1)
+    boostSimulationRadius()
+    startLaunchLoop()
+end)
+
+-- ==========================================
+-- INITIAL SETUP
+-- ==========================================
+boostSimulationRadius()
+
+if LocalPlayer.Character then
+    task.wait(1)
+    startLaunchLoop()
+end
+
+print("🎯 Alt bomb launcher loaded")
+print("   Target:", TARGET_NAME)
+print("   Height above target:", HEIGHT_ABOVE_TARGET)
+print("   Launch velocity:", LAUNCH_VELOCITY)
