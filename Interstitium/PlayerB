@@ -10,13 +10,14 @@ local LocalPlayer = Players.LocalPlayer
 local TARGET_NAME = "Andromodath"
 local LAUNCH_VELOCITY = 100000
 local SEAT_NAME = "SBTurretSeat"
-local RESET_INTERVAL = 10  -- seconds between character resets
+local RESET_INTERVAL = 10
 
 -- ===== STATE =====
 local bombData = {}
 local launchConn = nil
 local currentBomber = nil
-local resetActive = false
+local isResetting = false
+local generation = 0  -- Increments on each reset to cancel stale loops
 
 -- ==========================================
 -- BOOST SIMULATION RADIUS
@@ -25,7 +26,6 @@ local function boostSimulationRadius()
     pcall(function()
         sethiddenproperty(LocalPlayer, "SimulationRadius", 10000)
     end)
-    print("[Alt] Simulation radius boosted")
 end
 
 -- ==========================================
@@ -74,62 +74,8 @@ local function sitInTargetBomber()
     
     hrp.CFrame = seat.CFrame + Vector3.new(0, 2, 0)
     currentBomber = bomber
-    
     print("[Alt] ✅ Seated in", TARGET_NAME .. "'s Large Bomber")
     return true
-end
-
--- ==========================================
--- RESET CHARACTER (Leave seat, respawn, re-sit)
--- ==========================================
-local function resetCharacter()
-    if resetActive then return end
-    resetActive = true
-    
-    print("[Alt] 🔄 Resetting character...")
-    
-    -- Stop launch loop
-    if launchConn then
-        launchConn:Disconnect()
-        launchConn = nil
-    end
-    
-    -- Leave seat
-    local char = LocalPlayer.Character
-    if char then
-        local humanoid = char:FindFirstChildOfClass("Humanoid")
-        if humanoid then
-            humanoid.Sit = false
-        end
-    end
-    
-    task.wait(0.5)
-    
-    -- Respawn character
-    if char then
-        local humanoid = char:FindFirstChildOfClass("Humanoid")
-        if humanoid then
-            humanoid.Health = 0  -- Kill ourselves to force respawn
-        end
-    end
-    
-    task.wait(3)  -- Wait for respawn
-    
-    -- Clear bomb data (fresh start)
-    table.clear(bombData)
-    
-    -- Boost simulation radius again (new character)
-    boostSimulationRadius()
-    
-    -- Re-sit
-    task.wait(1)
-    sitInTargetBomber()
-    
-    -- Restart launch loop
-    startLaunchLoop()
-    
-    resetActive = false
-    print("[Alt] ✅ Character reset complete")
 end
 
 -- ==========================================
@@ -149,17 +95,20 @@ local function applyLaunchToBomb(bomb)
             task.wait(0.05)
         end
     end)
-    
-    print("[Alt] 🚀 Launched bomb")
 end
 
 -- ==========================================
 -- MAIN LAUNCH LOOP
 -- ==========================================
-local function startLaunchLoop()
-    if launchConn then launchConn:Disconnect() end
+local function startLaunchLoop(myGen)
+    if launchConn then
+        launchConn:Disconnect()
+        launchConn = nil
+    end
     
     launchConn = RunService.Heartbeat:Connect(function(dt)
+        if myGen ~= generation then return end  -- Stale loop, ignore
+        
         -- Check if still seated
         local char = LocalPlayer.Character
         if char then
@@ -193,15 +142,40 @@ local function startLaunchLoop()
 end
 
 -- ==========================================
--- STOP ALL
+-- RESET CHARACTER
 -- ==========================================
-local function stopAll()
+local function resetCharacter()
+    if isResetting then return end
+    isResetting = true
+    
+    generation = generation + 1  -- Invalidate current loop
+    local myGen = generation
+    
+    print("[Alt] 🔄 Resetting character...")
+    
+    -- Stop launch loop
     if launchConn then
         launchConn:Disconnect()
         launchConn = nil
     end
+    
+    -- Clear bomb data
     table.clear(bombData)
-    currentBomber = nil
+    
+    -- Kill self to force respawn
+    local char = LocalPlayer.Character
+    if char then
+        local humanoid = char:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid.Health = 0
+        end
+    end
+    
+    -- Wait for respawn (CharacterAdded will handle re-seating)
+    task.wait(5)
+    
+    isResetting = false
+    print("[Alt] ✅ Reset cycle complete")
 end
 
 -- ==========================================
@@ -210,12 +184,14 @@ end
 LocalPlayer.CharacterAdded:Connect(function()
     print("[Alt] Respawn detected — waiting...")
     task.wait(3)
-    stopAll()
-    task.wait(1)
+    
+    generation = generation + 1
+    local myGen = generation
+    
     boostSimulationRadius()
     task.wait(0.5)
     sitInTargetBomber()
-    startLaunchLoop()
+    startLaunchLoop(myGen)
 end)
 
 -- ==========================================
@@ -226,11 +202,11 @@ boostSimulationRadius()
 if LocalPlayer.Character then
     task.wait(1)
     sitInTargetBomber()
-    startLaunchLoop()
+    startLaunchLoop(generation)
 end
 
 -- ==========================================
--- RESET LOOP (every 10 seconds)
+-- RESET LOOP
 -- ==========================================
 task.spawn(function()
     while true do
@@ -239,7 +215,4 @@ task.spawn(function()
     end
 end)
 
-print("🎯 Alt turret gunner loaded (with 10s reset cycle)")
-print("   Target:", TARGET_NAME)
-print("   Seat:", SEAT_NAME)
-print("   Reset interval:", RESET_INTERVAL, "seconds")
+print("🎯 Alt turret gunner loaded (10s reset cycle)")
