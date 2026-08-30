@@ -1,4 +1,4 @@
--- LocalScript (Alt Account)
+-- LocalScript (Alt Account) | Fuck me
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -82,14 +82,17 @@ local function applyLaunchToBomb(bomb)
     if not bomb or not bomb.Parent then return end
     if bombData[bomb] then return end
     
-    -- Track the bomb
-    bombData[bomb] = {
-        launched = false
-    }
+    bombData[bomb] = { launched = true }
     
-    -- Apply upward velocity
-    bomb.AssemblyLinearVelocity = Vector3.new(0, LAUNCH_VELOCITY, 0)
-    bombData[bomb].launched = true
+    -- Apply velocity over multiple frames so it doesn't flop
+    task.spawn(function()
+        for i = 1, 10 do
+            if bomb and bomb.Parent then
+                bomb.AssemblyLinearVelocity = Vector3.new(0, LAUNCH_VELOCITY, 0)
+            end
+            task.wait(0.05)
+        end
+    end)
     
     print("[Alt] 🚀 Launched bomb at", LAUNCH_VELOCITY, "studs/s")
 end
