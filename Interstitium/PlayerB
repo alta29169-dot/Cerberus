@@ -62,7 +62,6 @@ local function teleportAboveTarget(target)
     myRoot.Velocity = Vector3.zero
     myRoot.RotVelocity = Vector3.zero
     
-    print("[Alt] Teleported above", TARGET_NAME, "at", targetPos)
     return true
 end
 
